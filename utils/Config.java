@@ -3,7 +3,7 @@ package walker.utils;
 
 
 public class Config {
-    private static final String LOGIN = "mdstrainer52";
+    private static final String LOGIN = "mdstrainer53";
     private static final String PASSWORD = "Five@live332";
     private static final double LATITUDE = 50.715943;
     private static final double LONGITUDE = -1.8762018;

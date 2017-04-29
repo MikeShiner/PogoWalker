@@ -6,11 +6,13 @@
 package walker.utils;
 
 import POGOProtos.Enums.PokemonIdOuterClass;
+import com.pokegoapi.api.pokemon.Pokemon;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 public class DAO {
 
@@ -54,15 +56,28 @@ public class DAO {
         }
     }
 
-    public void updatePokebag(String pokemon, double ivs, int cp, String move1, String move2) {
+    public void updatePokebag(List<Pokemon> myPokemon) {
         try {
-            Statement stmt = connection.createStatement();           
-            String query = "INSERT INTO pokebag VALUES ('" + pokemon + "', " + ivs + ", " + cp + ", '" + move1 + "', '" + move2 + "');";
-            stmt.executeUpdate(query);
+            for (Pokemon pokemon : myPokemon) {
+
+                Statement stmt = connection.createStatement();
+                String query = "INSERT INTO pokebag VALUES ('" + pokemon.getPokemonId().name() + "', " + pokemon.getIvInPercentage() + ", "
+                        + pokemon.getCp() + ", '" + pokemon.getMove1().name() + "', '" + pokemon.getMove2().name() + "');";
+                stmt.executeUpdate(query);
+            }
         } catch (Exception ex) {
             System.out.println("Error updating Pokebag: " + ex.toString());
         }
     }
+//    public void updatePokebag(String pokemon, double ivs, int cp, String move1, String move2) {
+//        try {
+//            Statement stmt = connection.createStatement();           
+//            String query = "INSERT INTO pokebag VALUES ('" + pokemon + "', " + ivs + ", " + cp + ", '" + move1 + "', '" + move2 + "');";
+//            stmt.executeUpdate(query);
+//        } catch (Exception ex) {
+//            System.out.println("Error updating Pokebag: " + ex.toString());
+//        }
+//    }
 
     private boolean testTables() throws SQLException {
         Statement stmt = connection.createStatement();

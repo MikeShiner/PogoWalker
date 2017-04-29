@@ -16,6 +16,8 @@ import com.pokegoapi.api.pokemon.Pokemon;
 import com.pokegoapi.exceptions.request.RequestFailedException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,10 +47,11 @@ public class MyPokemon {
 
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "Updating Database PokeBag..");
         database.clearPokebag();
-        for (Pokemon pokemon : pokemons) {
-            database.updatePokebag(pokemon.getPokemonId().name(), pokemon.getIvInPercentage(),
-                    pokemon.getCp(), pokemon.getMove1().name(), pokemon.getMove2().name());
-        }
+        database.updatePokebag(pokemons);
+//        for (Pokemon pokemon : pokemons) {
+//            database.updatePokebag(pokemon.getPokemonId().name(), pokemon.getIvInPercentage(),
+//                    pokemon.getCp(), pokemon.getMove1().name(), pokemon.getMove2().name());
+//        }
     }
 
     public void printBagStats() {
@@ -56,10 +59,8 @@ public class MyPokemon {
     }
 
     public void printMyPokemon() {
-        System.out.println("Your pokemon: ");
-        for (Pokemon pokemon : pokemons) {
-            System.out.println(pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%)");
-        }
+        System.out.println("Your pokemon: " + pokemons.size() + "/" + pokebag.getMaxStorage());
+
     }
 
     public List<Pokemon> getPokemons() {
@@ -93,9 +94,112 @@ public class MyPokemon {
         return pokemonEvos;
     }
 
+    // getPokemonEvolutions with the original pokemon included
+    public List<Pokemon> getFullFamily(PokemonId pokemonID) {
+        List<Pokemon> pokemonFamily = new ArrayList<Pokemon>();
+        List<PokemonId> evos = evolutionMeta.getEvolutions(pokemonID);
+
+        for (Pokemon pokemon : pokemons) {
+            if (pokemon.getPokemonId().equals(pokemonID)) {
+                pokemonFamily.add(pokemon);
+            }
+            for (PokemonId evolution : evos) {
+                if (pokemon.getPokemonId().equals(evolution)) {
+                    pokemonFamily.add(pokemon);
+                }
+            }
+        }
+        return pokemonFamily;
+    }
+
+    // Need better way to get candy result then to us a 1 element array
     public void transferPokemon(Pokemon pokemon) {
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "Transfering " + pokemon.getPokemonId());
-        pokebag.removePokemon(pokemon);
+        List<Pokemon> transferList = new ArrayList<Pokemon>();
+        transferList.add(pokemon);
+        transferPokemonList(transferList);
+    }
+
+    public void transferInsuperior(Pokemon superiorPkmn) {
+        List<Pokemon> transferList = new ArrayList<Pokemon>();
+
+        for (Pokemon pokemon : pokemons) {
+            if (pokemon.getPokemonId().equals(superiorPkmn.getPokemonId()) && !pokemon.equals(superiorPkmn)) {
+                transferList.add(pokemon);
+            }
+        }
+        transferPokemonList(transferList);
+    }
+
+    public void evolveMyBest(PokemonId pokemonID) throws RequestFailedException, InterruptedException {
+        List<Pokemon> evolutions = orderByIVsDesc(getFullFamily(pokemonID));
+        Pokemon pokemonToEvolve = evolutions.get(0);
+        boolean canIEvolve = pokemonToEvolve.canEvolve();
+
+        for (Pokemon pokemon : evolutions) {
+            System.out.println(pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
+        }
+
+        // Remove Highest IV from the transfer list
+        evolutions.remove(0);
+        System.out.println("I've picked to evolve: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%)");
+        transferPokemonList(evolutions);
+        Thread.sleep(4000);
+        if (canIEvolve) {
+            System.out.println("Evolving..");
+            EvolutionResult result = pokemonToEvolve.evolve();
+            if (result.isSuccessful()) {
+                Thread.sleep(6000);
+                Pokemon evolved = result.getEvolvedPokemon();
+                canIEvolve = evolved.canEvolve();
+                System.out.println("Success: " + evolved.getPokemonId());
+                System.out.println("Can I evolve? " + canIEvolve);
+            } else {
+                System.out.println("Evolve unsuccessfull.");
+            }
+        }
+    }
+
+    public List<Pokemon> orderByIVsDesc(List<Pokemon> sortingList) {
+        Comparator<Pokemon> ivSort = (Pokemon primary, Pokemon secondary) -> {
+            double iv1 = primary.getIvInPercentage();
+            double iv2 = secondary.getIvInPercentage();
+            return Double.compare(iv2, iv1);
+        };
+        Collections.sort(sortingList, ivSort);
+        return sortingList;
+    }
+
+    public void transferPokemonList(List<Pokemon> transferList) {
+        if (transferList.size() > 0) {
+            try {
+                Pokemon[] transferArray = transferList.toArray(new Pokemon[transferList.size()]);
+                Map<PokemonFamilyId, Integer> responses = pokebag.releasePokemon(transferArray);
+
+                // Get all candies for pokemon transfered
+                Map<PokemonFamilyId, Integer> candies = new HashMap<>();
+                for (Map.Entry<PokemonFamilyId, Integer> entry : responses.entrySet()) {
+                    int candyAwarded = entry.getValue();
+                    PokemonFamilyId family = entry.getKey();
+                    Integer candy = candies.get(family);
+                    if (candy == null) {
+                        //candies map does not yet contain the amount if null, so set it to 0
+                        candy = 0;
+                    }
+                    //Add the awarded candies from this request
+                    candy += candyAwarded;
+                    candies.put(family, candy);
+                }
+                for (Map.Entry<PokemonFamilyId, Integer> entry : candies.entrySet()) {
+                    System.out.println(entry.getKey() + ": " + entry.getValue() + " candies awarded");
+
+                }
+            } catch (RequestFailedException ex) {
+                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Transfering insuperiors: " + ex.toString());
+            } catch (NullPointerException ex) {
+                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "No pokemon to transfer" + ex.toString());
+            }
+        }
     }
 
 //    public void EvolvesMyPokemon() throws RequestFailedException, InterruptedException {
@@ -237,47 +341,7 @@ public class MyPokemon {
 //        }
 //        return bestPokemon;
 //    }
-
 //    // Transfers all pokemon of a certain ID except the highest IV one.
-//    public void transferInsuperior(PokemonId pokemonID) {
-//        Pokemon bestPokemon = findSuperior(pokemonID);
-//        List<Pokemon> transferList = new ArrayList<Pokemon>();
-//
-//        for (Pokemon pokemon : pokemons) {
-//            if (pokemon.getPokemonId().equals(pokemonID) && !pokemon.equals(bestPokemon)) {
-//                transferList.add(pokemon);
-//            }
-//        }
-//        if (transferList.size() > 0) {
-//            try {
-//                Pokemon[] transferArray = transferList.toArray(new Pokemon[transferList.size()]);
-//                Map<PokemonFamilyId, Integer> responses = pokebag.releasePokemon(transferArray);
-//
-//                // Get all candies for pokemon transfered
-//                Map<PokemonFamilyId, Integer> candies = new HashMap<>();
-//                for (Map.Entry<PokemonFamilyId, Integer> entry : responses.entrySet()) {
-//                    int candyAwarded = entry.getValue();
-//                    PokemonFamilyId family = entry.getKey();
-//                    Integer candy = candies.get(family);
-//                    if (candy == null) {
-//                        //candies map does not yet contain the amount if null, so set it to 0
-//                        candy = 0;
-//                    }
-//                    //Add the awarded candies from this request
-//                    candy += candyAwarded;
-//                    candies.put(family, candy);
-//                }
-//                for (Map.Entry<PokemonFamilyId, Integer> entry : candies.entrySet()) {
-//                    System.out.println(entry.getKey() + ": " + entry.getValue() + " candies awarded");
-//
-//                }
-//            } catch (RequestFailedException ex) {
-//                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Transfering insuperiors: " + ex.toString());
-//            } catch (NullPointerException ex) {
-//                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "No pokemon to transfer" + ex.toString());
-//            }
-//        }
-//    }
 //
 //    private String caninvolve() {
 //        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
