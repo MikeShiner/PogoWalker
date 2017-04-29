@@ -78,7 +78,6 @@ public class DAO {
         executorService.execute(new Runnable() {
             public void run() {
                 try {
-                    System.out.println("Asynchronous updting..");
                     Iterator<Pokemon> itr = copyList.iterator();
                     while (itr.hasNext()) {
                         Pokemon pokemon = itr.next();

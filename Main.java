@@ -26,6 +26,7 @@ import com.pokegoapi.api.pokemon.Pokemon;
 import com.pokegoapi.api.settings.PokeballSelector;
 import com.pokegoapi.auth.PtcCredentialProvider;
 import com.pokegoapi.exceptions.NoSuchItemException;
+import com.pokegoapi.exceptions.request.LoginFailedException;
 import com.pokegoapi.exceptions.request.RequestFailedException;
 import com.pokegoapi.util.MapUtil;
 import com.pokegoapi.util.PokeDictionary;
@@ -33,6 +34,7 @@ import com.pokegoapi.util.hash.HashProvider;
 import com.pokegoapi.util.hash.pokehash.PokeHashKey;
 import com.pokegoapi.util.hash.pokehash.PokeHashProvider;
 import com.pokegoapi.util.path.Path;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -57,6 +59,7 @@ public class Main {
     private static PokemonGo api;
     private static Double latitude = 0.0;
     private static Double longitude = 0.0;
+    private static final DecimalFormat f = new DecimalFormat("##.00");
 
     public static void main(String[] args) throws InterruptedException {
         DAO database = new DAO();
@@ -71,20 +74,25 @@ public class Main {
                 Inventory inv = new Inventory(api);
                 inv.printStock();
                 inv.clearItems();
+                MyPokedex myPokedex = new MyPokedex(api, database);
+                MyPokemon myPokemon = new MyPokemon(api, database);
+                printStats(inv, myPokemon, api.getPlayerProfile());
                 while (true) {
-                    MyPokedex myPokedex = new MyPokedex(api, database);
-                    MyPokemon myPokemon = new MyPokemon(api, database);
-                    printStats(inv, myPokemon, api.getPlayerProfile());
                     myPokemon.printMyPokemon();
                     catchArea(myPokedex, myPokemon, api);
                     List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
                     walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
+                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "Loop complete.. Waiting some.");
+                    requestChill("long");
+                    requestChill("long");
                 }
                 // Clear itms?
 //                looper = false;
             } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Main exception thrown! " + ex.toString());
+                ex.printStackTrace();
                 requestChill("long");
+                api = null; // Reset API for new login
             }
         }
 
@@ -209,7 +217,6 @@ public class Main {
         int currentCandyCount;
         int candiesNeeded;
         double highestIV = 0.0;
-        boolean finalForm = false;
 
         // Determine whether I have enough candies for final form evolution.
         PokemonId pokemonID = encounter.getEncounteredPokemon().getPokemonId();
@@ -225,7 +232,6 @@ public class Main {
             if (candiesNeeded == 0) {
                 Logger.INSTANCE.Log(Logger.TYPE.INFO, "This Pokemon can't be evoled any further");
                 haveIGotEnoughCandies = true;
-                finalForm = true;
             } else {
                 List<Pokemon> evolutions = myPokemon.getPokemonEvolutions(pokemonID);
                 for (Pokemon evos : evolutions) {
@@ -240,7 +246,7 @@ public class Main {
             }
             // Determine whether it's a better evolution
             double encounterIV = getPercentageIV(encounter.getEncounteredPokemon());
-            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Is it better than the one I've got? " + isItBetterIvs + " Mines: " + highestIV + "% Vs. " + encounterIV + "%");
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Is it better than the one I've got? " + isItBetterIvs + " Mines: " + highestIV + "% Vs. " + f.format(encounterIV) + "%");
             if (highestIV < encounterIV) {
                 isItBetterIvs = true;
             }
@@ -281,9 +287,7 @@ public class Main {
     private static Pokemon catchPokemon(Encounter encounter, PokemonGo api) throws RequestFailedException, InterruptedException, NoSuchItemException {
         ItemBag bag = api.getInventories().getItemBag();
         PokeBank pokebank = api.getInventories().getPokebank();
-        boolean success = false;
         Pokemon caughtPokemon = null;
-        requestChill("short");
         if (encounter.isSuccessful()) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encountered: " + encounter.getEncounteredPokemon().getPokemonId());
 
