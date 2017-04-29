@@ -71,18 +71,19 @@ public class Main {
                 Inventory inv = new Inventory(api);
                 inv.printStock();
                 inv.clearItems();
-                MyPokedex myPokedex = new MyPokedex(api, database);
-                MyPokemon myPokemon = new MyPokemon(api, database);
-                printStats(inv, myPokemon, api.getPlayerProfile());
-                myPokemon.printMyPokemon();
-                catchArea(myPokedex, myPokemon, api);
-                List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
-                walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
+                while (true) {
+                    MyPokedex myPokedex = new MyPokedex(api, database);
+                    MyPokemon myPokemon = new MyPokemon(api, database);
+                    printStats(inv, myPokemon, api.getPlayerProfile());
+                    myPokemon.printMyPokemon();
+                    catchArea(myPokedex, myPokemon, api);
+                    List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
+                    walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
+                }
                 // Clear itms?
 //                looper = false;
-            } catch (Exception ex) {
+            } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Main exception thrown! " + ex.toString());
-                ex.printStackTrace();
                 requestChill("long");
             }
         }

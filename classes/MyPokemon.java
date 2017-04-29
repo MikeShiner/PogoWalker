@@ -31,6 +31,7 @@ public class MyPokemon {
     private List<Pokemon> pokemons;
     private final Evolutions evolutionMeta;
     private final DAO database;
+    
     PokeBank pokebag;
 
     DecimalFormat df = new DecimalFormat("#0.00");
