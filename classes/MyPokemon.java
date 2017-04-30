@@ -49,10 +49,6 @@ public class MyPokemon {
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "Updating Database PokeBag..");
         database.clearPokebag();
         database.updatePokebag(pokemons);
-//        for (Pokemon pokemon : pokemons) {
-//            database.updatePokebag(pokemon.getPokemonId().name(), pokemon.getIvInPercentage(),
-//                    pokemon.getCp(), pokemon.getMove1().name(), pokemon.getMove2().name());
-//        }
     }
 
     public void printBagStats() {
@@ -143,9 +139,7 @@ public class MyPokemon {
 
         // Remove Highest IV from the transfer list
         evolutions.remove(0);
-        System.out.println("I've picked to evolve: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%)");
         transferPokemonList(evolutions);
-        Thread.sleep(4000);
         if (canIEvolve) {
             System.out.println("Evolving..");
             EvolutionResult result = pokemonToEvolve.evolve();

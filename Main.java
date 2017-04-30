@@ -10,25 +10,18 @@ import POGOProtos.Enums.PokemonIdOuterClass.PokemonId;
 import POGOProtos.Inventory.Item.ItemIdOuterClass;
 import POGOProtos.Networking.Responses.CatchPokemonResponseOuterClass;
 import com.pokegoapi.api.PokemonGo;
-import com.pokegoapi.api.inventory.ItemBag;
-import com.pokegoapi.api.inventory.PokeBank;
-import com.pokegoapi.api.inventory.Pokeball;
+import com.pokegoapi.api.inventory.*;
 import com.pokegoapi.api.listener.PlayerListener;
 import com.pokegoapi.api.map.MapObjects;
 import com.pokegoapi.api.map.Point;
 import com.pokegoapi.api.map.fort.Pokestop;
 import com.pokegoapi.api.map.fort.PokestopLootResult;
-import com.pokegoapi.api.map.pokemon.CatchablePokemon;
-import com.pokegoapi.api.map.pokemon.Encounter;
-import com.pokegoapi.api.map.pokemon.NearbyPokemon;
-import com.pokegoapi.api.map.pokemon.ThrowProperties;
-import com.pokegoapi.api.player.Medal;
-import com.pokegoapi.api.player.PlayerProfile;
+import com.pokegoapi.api.map.pokemon.*;
+import com.pokegoapi.api.player.*;
 import com.pokegoapi.api.pokemon.Pokemon;
 import com.pokegoapi.api.settings.PokeballSelector;
 import com.pokegoapi.auth.PtcCredentialProvider;
 import com.pokegoapi.exceptions.NoSuchItemException;
-import com.pokegoapi.exceptions.request.LoginFailedException;
 import com.pokegoapi.exceptions.request.RequestFailedException;
 import com.pokegoapi.util.MapUtil;
 import com.pokegoapi.util.PokeDictionary;
@@ -44,7 +37,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
-import java.util.logging.Level;
 import okhttp3.OkHttpClient;
 import walker.classes.*;
 import walker.utils.*;
@@ -85,9 +77,9 @@ public class Main {
                 MyPokedex myPokedex = new MyPokedex(api, database);
                 MyPokemon myPokemon = new MyPokemon(api, database);
                 printStats(inv, myPokemon, api.getPlayerProfile());
+                myPokemon.printMyPokemon();
+                catchArea(myPokedex, myPokemon, api);
                 while (true) {
-                    myPokemon.printMyPokemon();
-                    catchArea(myPokedex, myPokemon, api);
                     List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
                     walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
                     Logger.INSTANCE.Log(Logger.TYPE.INFO, "Loop complete.. Waiting some.");
@@ -99,10 +91,10 @@ public class Main {
             } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Main exception thrown! " + ex.toString());
                 ex.printStackTrace();
-            try {
+                try {
                     requestChill("long");
                 } catch (InterruptedException ex2) {
-                    Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Thread can't wait.. " + ex.toString());
+                    Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Thread can't wait.. " + ex2.toString());
                 }
             }
         }
@@ -158,6 +150,7 @@ public class Main {
                 Path path = new Path(api.getPoint(), destination, 20.0);
                 System.out.println("Traveling to " + destination + " at 20KMPH! It'll take me.. " + path.getTotalTime());
                 path.start(api);
+                int counter = 0;
                 try {
                     while (!path.isComplete()) {
                         //Calculate the desired intermediate point for the current time
@@ -169,10 +162,14 @@ public class Main {
                         longitude = point.getLongitude();
                         api.setLongitude(point.getLongitude());
                         //Sleep for 2 seconds before setting the location again
-                        Thread.sleep(2000);
+                        requestChill("short");
+                        if (counter % 4 == 0 && inv.getBalls_total() > 10) {
+                            catchArea(pokedex, myPkmn, api);
+                        }
+                        counter++;
                     }
                 } catch (InterruptedException e) {
-                    break;
+                    Logger.INSTANCE.Log(Logger.TYPE.ERROR, e.toString());
                 }
                 System.out.println("Finished traveling to pokestop.");
                 if (pokestop.inRange() && pokestop.canLoot()) {
@@ -209,7 +206,7 @@ public class Main {
                     requestChill("long");
                 }
             } else {
-                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Encounter Unsuccessful!");
+                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Encounter Unsuccessful! (" + cp.getPokemonId() + ")");
 
             }
             requestChill("long");
@@ -228,7 +225,6 @@ public class Main {
         boolean isItBetterIvs = false;
         int currentCandyCount;
         int candiesNeeded;
-        double highestIV = 0.0;
 
         // Determine whether I have enough candies for final form evolution.
         PokemonId pokemonID = encounter.getEncounteredPokemon().getPokemonId();
@@ -239,7 +235,6 @@ public class Main {
             catchPokemon(encounter, api);
         } else {
             currentCandyCount = currentPokemon.getCandy();
-            highestIV = currentPokemon.getIvInPercentage();
             candiesNeeded = currentPokemon.getCandiesToEvolve();
             if (candiesNeeded == 0) {
                 Logger.INSTANCE.Log(Logger.TYPE.INFO, "This Pokemon can't be evoled any further");
@@ -258,10 +253,12 @@ public class Main {
             }
             // Determine whether it's a better evolution
             double encounterIV = getPercentageIV(encounter.getEncounteredPokemon());
-            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Is it better than the one I've got? " + isItBetterIvs + " Mines: " + highestIV + "% Vs. " + f.format(encounterIV) + "%");
-            if (highestIV < encounterIV) {
+            // Get my best pokemon from family
+            Pokemon myFamilyBest = myPokemon.orderByIVsDesc(myPokemon.getFullFamily(pokemonID)).get(0);
+            if (encounterIV > myFamilyBest.getIvInPercentage()) {
                 isItBetterIvs = true;
             }
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Is it better than the one I've got? " + isItBetterIvs + " Mines: " + myFamilyBest.getPokemonId() + "(" + myFamilyBest.getIvInPercentage() + "%) Vs. " + f.format(encounterIV) + "%");
 
             // Decision logic //
             if (haveIGotEnoughCandies && isItBetterIvs) {
@@ -379,7 +376,7 @@ public class Main {
                     @Override
                     public void onLevelUp(PokemonGo pg, int i, int i1) {
                         Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Level Up Detected! Rebooting bot to accept rewards..");
-                         startLooper();
+                        startLooper();
                     }
 
                     @Override
@@ -389,7 +386,7 @@ public class Main {
 
                     @Override
                     public void onWarningReceived(PokemonGo pg) {
-                      //  throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                        //  throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
                     }
 
                 });
