@@ -13,6 +13,7 @@ import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.inventory.ItemBag;
 import com.pokegoapi.api.inventory.PokeBank;
 import com.pokegoapi.api.inventory.Pokeball;
+import com.pokegoapi.api.listener.PlayerListener;
 import com.pokegoapi.api.map.MapObjects;
 import com.pokegoapi.api.map.Point;
 import com.pokegoapi.api.map.fort.Pokestop;
@@ -21,6 +22,7 @@ import com.pokegoapi.api.map.pokemon.CatchablePokemon;
 import com.pokegoapi.api.map.pokemon.Encounter;
 import com.pokegoapi.api.map.pokemon.NearbyPokemon;
 import com.pokegoapi.api.map.pokemon.ThrowProperties;
+import com.pokegoapi.api.player.Medal;
 import com.pokegoapi.api.player.PlayerProfile;
 import com.pokegoapi.api.pokemon.Pokemon;
 import com.pokegoapi.api.settings.PokeballSelector;
@@ -42,6 +44,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
+import java.util.logging.Level;
 import okhttp3.OkHttpClient;
 import walker.classes.*;
 import walker.utils.*;
@@ -55,6 +58,7 @@ public class Main {
     private static final OkHttpClient HTTPCLIENT = new OkHttpClient();
     private static final Config config = new Config();
     private static final Random RANDOM = new Random();
+    private static final DAO database = new DAO();
 
     private static PokemonGo api;
     private static Double latitude = 0.0;
@@ -62,13 +66,17 @@ public class Main {
     private static final DecimalFormat f = new DecimalFormat("##.00");
 
     public static void main(String[] args) throws InterruptedException {
-        DAO database = new DAO();
         latitude = config.getLATITUDE();
         longitude = config.getLONGITUDE();
+        startLooper();
+    }
+
+    private static void startLooper() {
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "START: Logging in...");
         boolean looper = true;
 
         while (looper) {
+            api = null; // Reconnection reset
             try {
                 api = login(config.getHASH_KEY(), config.getLOGIN(), config.getPASSWORD(), longitude, latitude);
                 Inventory inv = new Inventory(api);
@@ -91,12 +99,13 @@ public class Main {
             } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Main exception thrown! " + ex.toString());
                 ex.printStackTrace();
-                requestChill("long");
-                api = null; // Reset API for new login
+            try {
+                    requestChill("long");
+                } catch (InterruptedException ex2) {
+                    Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Thread can't wait.. " + ex.toString());
+                }
             }
         }
-
-        System.out.println("Loop complete");
     }
 
     /**
@@ -155,6 +164,9 @@ public class Main {
                         Point point = path.calculateIntermediate(api);
                         //Set the API location to that point
                         api.setLatitude(point.getLatitude());
+                        // Update current bot location for re-logon
+                        latitude = point.getLatitude();
+                        longitude = point.getLongitude();
                         api.setLongitude(point.getLongitude());
                         //Sleep for 2 seconds before setting the location again
                         Thread.sleep(2000);
@@ -363,6 +375,24 @@ public class Main {
                 api.login(new PtcCredentialProvider(HTTPCLIENT, login, password), provider);
                 api.setLocation(latitude, longitude, 0);
                 loggedIn = true;
+                api.addListener(new PlayerListener() {
+                    @Override
+                    public void onLevelUp(PokemonGo pg, int i, int i1) {
+                        Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Level Up Detected! Rebooting bot to accept rewards..");
+                         startLooper();
+                    }
+
+                    @Override
+                    public void onMedalAwarded(PokemonGo pg, PlayerProfile pp, Medal medal) {
+                        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+
+                    @Override
+                    public void onWarningReceived(PokemonGo pg) {
+                      //  throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+
+                });
             } catch (Exception ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Error Logging in. " + ex.toString());
                 requestChill("long");
