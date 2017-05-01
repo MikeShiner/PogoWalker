@@ -34,9 +34,13 @@ public class Inventory {
     int razzberries = 0;
     int nanabberries = 0;
     int pinapberries = 0;
+    
+    int incubators = 0;
+    int incubators_free = 0;
 
     int incense_count = 0;
     int revives_count = 0;
+    int metal_coat = 0;
 
     int bagCount = 0;
     int bagMax = 0;
@@ -72,10 +76,13 @@ public class Inventory {
         // Cache other items
         incense_count = bag.getItem(ITEM_INCENSE_ORDINARY).getCount();
         revives_count = bag.getItem(ITEM_REVIVE).getCount();
+        metal_coat = bag.getItem(ITEM_METAL_COAT).getCount();
 
         razzberries = bag.getItem(ITEM_RAZZ_BERRY).getCount();
         nanabberries = bag.getItem(ITEM_NANAB_BERRY).getCount();
         pinapberries = bag.getItem(ITEM_PINAP_BERRY).getCount();
+        
+        incubators = bag.getItem(ITEM_INCUBATOR_BASIC).getCount();                
 
         usablePokeballs = bag.getUsablePokeballs();
 
@@ -89,6 +96,7 @@ public class Inventory {
         System.out.println("Potions/Super/Max: " + potions + "/" + superpotions + "/" + hyperpotions);
         System.out.println("Razz/Nanab/Pinap: " + razzberries + "/" + nanabberries + "/" + pinapberries);
         System.out.println("Revives: " + revives_count);
+        System.out.println("Incubators: " + incubators);
     }
 
     public void clearItems() throws RequestFailedException {

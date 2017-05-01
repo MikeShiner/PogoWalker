@@ -82,7 +82,7 @@ public class DAO {
                     while (itr.hasNext()) {
                         Pokemon pokemon = itr.next();
                         Statement stmt = connection.createStatement();
-                        String query = "INSERT INTO pokebag VALUES ('" + pokemon.getPokemonId().name() + "', " + pokemon.getIvInPercentage() + ", "
+                        String query = "INSERT INTO pokebag VALUES (" + pokemon.getSettings().getPokemonIdValue() + ",  '" + pokemon.getPokemonId().name() + "', " + pokemon.getIvInPercentage() + ", "
                                 + pokemon.getCp() + ", '" + pokemon.getMove1().name() + "', '" + pokemon.getMove2().name() + "');";
                         stmt.executeUpdate(query);
                     }
@@ -117,6 +117,7 @@ public class DAO {
         // Set up Pokebag
         stmt.executeUpdate(query);
         query = "CREATE TABLE pokebag ("
+                + "ID INT NOT NULL, "
                 + "Name VARCHAR(30) NOT NULL, "
                 + "IVs DOUBLE NOT NULL, "
                 + "CP INTEGER NOT NULL, "

@@ -184,6 +184,7 @@ public class Main {
             }
         } catch (Exception ex) {
             Logger.INSTANCE.Log(Logger.TYPE.ERROR, "WalkingToNearbyPokestops: " + ex.toString());
+            ex.printStackTrace();
         }
     }
 
@@ -194,6 +195,7 @@ public class Main {
         for (CatchablePokemon cp : catchable) {
             // Do I need in my Pokedex?
             boolean newPokedexEntry = pokedex.doINeed(cp.getPokemonId());
+            requestChill("short");
             Encounter encounter = cp.encounter();
             if (encounter.isSuccessful()) {
 
@@ -206,7 +208,7 @@ public class Main {
                     requestChill("long");
                 }
             } else {
-                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Encounter Unsuccessful! (" + cp.getPokemonId() + ")");
+                Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Encounter Unsuccessful! (" + cp.getPokemonId() + ")" + encounter.getEncounterResult().toString());
 
             }
             requestChill("long");
@@ -230,21 +232,14 @@ public class Main {
         PokemonId pokemonID = encounter.getEncounteredPokemon().getPokemonId();
         // Current pokemon of this kind.
         Pokemon currentPokemon = myPokemon.getPokemon(pokemonID);
-        if (currentPokemon == null) {
-            // If caught before but not in bag.. Catch again.
-            catchPokemon(encounter, api);
-        } else {
-            currentCandyCount = currentPokemon.getCandy();
-            candiesNeeded = currentPokemon.getCandiesToEvolve();
+        
+            candiesNeeded = myPokemon.getCandiesToEvolve(pokemonID);
+            currentCandyCount = myPokemon.getCandiesFromFamily(pokemonID);
             if (candiesNeeded == 0) {
                 Logger.INSTANCE.Log(Logger.TYPE.INFO, "This Pokemon can't be evoled any further");
                 haveIGotEnoughCandies = true;
             } else {
-                List<Pokemon> evolutions = myPokemon.getPokemonEvolutions(pokemonID);
-                for (Pokemon evos : evolutions) {
-                    candiesNeeded = candiesNeeded + evos.getCandiesToEvolve();
-                }
-
+                
                 if (currentCandyCount >= candiesNeeded) {
                     haveIGotEnoughCandies = true;
                 }
@@ -274,7 +269,7 @@ public class Main {
                 Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer old copy of pokemon
                 if (caughtPokemon != null) {
                     myPokemon.update(api);
-                    myPokemon.transferPokemon(currentPokemon);
+                    myPokemon.transferPokemon(myFamilyBest);
                 }
             } else if (!haveIGotEnoughCandies && !isItBetterIvs) {
                 Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need the candy and it's not as good. I'l catch it and transfer it.");
@@ -287,10 +282,10 @@ public class Main {
             } else if (haveIGotEnoughCandies && !isItBetterIvs) {
                 Logger.INSTANCE.Log(Logger.TYPE.INFO, "Don't need the candy and it's worse IV one. I'l leave it I reckon.");
                 // Don't bother catching - don't need it. - But spend your candy evolving the type!
-                myPokemon.evolveMyBest(currentPokemon.getPokemonId());
+                myPokemon.evolveMyBest(myFamilyBest.getPokemonId());
             }
             requestChill("long");
-        }
+        
     }
 
     private static Pokemon catchPokemon(Encounter encounter, PokemonGo api) throws RequestFailedException, InterruptedException, NoSuchItemException {

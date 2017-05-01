@@ -19,8 +19,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -112,13 +115,13 @@ public class MyPokemon {
     // Need better way to get candy result then to us a 1 element array
     public void transferPokemon(Pokemon pokemon) {
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "Transfering " + pokemon.getPokemonId());
-        List<Pokemon> transferList = new ArrayList<Pokemon>();
+        List<Pokemon> transferList = new ArrayList<>();
         transferList.add(pokemon);
         transferPokemonList(transferList);
     }
 
     public void transferInsuperior(Pokemon superiorPkmn) {
-        List<Pokemon> transferList = new ArrayList<Pokemon>();
+        List<Pokemon> transferList = new ArrayList<>();
 
         for (Pokemon pokemon : pokemons) {
             if (pokemon.getPokemonId().equals(superiorPkmn.getPokemonId()) && !pokemon.equals(superiorPkmn)) {
@@ -126,6 +129,18 @@ public class MyPokemon {
             }
         }
         transferPokemonList(transferList);
+    }
+    
+    public void transferInsuperior(PokemonId pokemonID){
+        List<Pokemon> evolutions = orderByIVsDesc(getFullFamily(pokemonID));
+
+        for (Pokemon pokemon : evolutions) {
+            System.out.println(pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
+        }
+
+        // Remove Highest IV from the transfer list
+        evolutions.remove(0);
+        transferPokemonList(evolutions);
     }
 
     public void evolveMyBest(PokemonId pokemonID) throws RequestFailedException, InterruptedException {
@@ -153,6 +168,25 @@ public class MyPokemon {
                 System.out.println("Evolve unsuccessfull.");
             }
         }
+    }
+    
+    public int getCandiesToEvolve(PokemonId pokemonID){
+        int candy = 0;
+        List<Pokemon> myFamily = getFullFamily(pokemonID);
+        // Remove duplicates by using HashSet
+        HashSet<PokemonId> seen = new HashSet<>();
+        myFamily.removeIf(e->!seen.add(e.getPokemonId()));
+        
+        for (Pokemon pokemon : myFamily){
+            candy = candy + pokemon.getCandiesToEvolve();
+            System.out.println("Adding " + pokemon.getPokemonId());
+            System.out.println("Adding candy.. " + pokemon.getCandiesToEvolve());
+        }
+        return candy;
+    }
+    public int getCandiesFromFamily(PokemonId pokemonID){
+        List<Pokemon> myFamily = getFullFamily(pokemonID);
+        return myFamily.get(0).getCandy();
     }
 
     public List<Pokemon> orderByIVsDesc(List<Pokemon> sortingList) {
