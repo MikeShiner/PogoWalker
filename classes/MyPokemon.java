@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +33,7 @@ public class MyPokemon {
     private List<Pokemon> pokemons;
     private final Evolutions evolutionMeta;
     private final DAO database;
-    
+
     PokeBank pokebag;
 
     DecimalFormat df = new DecimalFormat("#0.00");
@@ -81,7 +80,7 @@ public class MyPokemon {
 
     // Search through Pokebag and find all evolutions
     public List<Pokemon> getPokemonEvolutions(PokemonId pokemonID) {
-        List<Pokemon> pokemonEvos = new ArrayList<Pokemon>();
+        List<Pokemon> pokemonEvos = new ArrayList<>();
         List<PokemonId> evos = evolutionMeta.getEvolutions(pokemonID);
 
         for (Pokemon pokemon : pokemons) {
@@ -95,15 +94,23 @@ public class MyPokemon {
     }
 
     // getPokemonEvolutions with the original pokemon included
+    // Includes duplicates
     public List<Pokemon> getFullFamily(PokemonId pokemonID) {
-        List<Pokemon> pokemonFamily = new ArrayList<Pokemon>();
-        List<PokemonId> evos = evolutionMeta.getEvolutions(pokemonID);
+        List<Pokemon> pokemonFamily = new ArrayList<>();
+
+        PokemonId currentPokemon = evolutionMeta.getBasic(pokemonID).get(0);
+        boolean canEvolve = evolutionMeta.canEvolve(currentPokemon);
+        List<PokemonId> evoList = new ArrayList<>();
+        evoList.add(currentPokemon);
+        while (canEvolve) {
+            List<PokemonId> evos = evolutionMeta.getEvolutions(currentPokemon);
+            currentPokemon = evos.get(0);
+            canEvolve = evolutionMeta.canEvolve(currentPokemon);
+            evoList.addAll(evos);
+        }
 
         for (Pokemon pokemon : pokemons) {
-            if (pokemon.getPokemonId().equals(pokemonID)) {
-                pokemonFamily.add(pokemon);
-            }
-            for (PokemonId evolution : evos) {
+            for (PokemonId evolution : evoList) {
                 if (pokemon.getPokemonId().equals(evolution)) {
                     pokemonFamily.add(pokemon);
                 }
@@ -130,8 +137,8 @@ public class MyPokemon {
         }
         transferPokemonList(transferList);
     }
-    
-    public void transferInsuperior(PokemonId pokemonID){
+
+    public void transferInsuperior(PokemonId pokemonID) {
         List<Pokemon> evolutions = orderByIVsDesc(getFullFamily(pokemonID));
 
         for (Pokemon pokemon : evolutions) {
@@ -157,34 +164,43 @@ public class MyPokemon {
         transferPokemonList(evolutions);
         if (canIEvolve) {
             System.out.println("Evolving..");
+            PokemonId startEvo = pokemonToEvolve.getPokemonId();
             EvolutionResult result = pokemonToEvolve.evolve();
             if (result.isSuccessful()) {
                 Thread.sleep(6000);
                 Pokemon evolved = result.getEvolvedPokemon();
+                PokemonId finishEvo = evolved.getPokemonId();
                 canIEvolve = evolved.canEvolve();
-                System.out.println("Success: " + evolved.getPokemonId());
+                Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Successfully evolved a " + startEvo + " into a " + finishEvo);
                 System.out.println("Can I evolve? " + canIEvolve);
             } else {
                 System.out.println("Evolve unsuccessfull.");
             }
         }
     }
-    
-    public int getCandiesToEvolve(PokemonId pokemonID){
-        int candy = 0;
-        List<Pokemon> myFamily = getFullFamily(pokemonID);
-        // Remove duplicates by using HashSet
-        HashSet<PokemonId> seen = new HashSet<>();
-        myFamily.removeIf(e->!seen.add(e.getPokemonId()));
-        
-        for (Pokemon pokemon : myFamily){
-            candy = candy + pokemon.getCandiesToEvolve();
-            System.out.println("Adding " + pokemon.getPokemonId());
-            System.out.println("Adding candy.. " + pokemon.getCandiesToEvolve());
+
+    public int getCandiesToEvolve(PokemonId pokemonID) {
+        PokemonId currentPokemon = evolutionMeta.getBasic(pokemonID).get(0);
+        boolean canEvolve = evolutionMeta.canEvolve(currentPokemon);
+        System.out.println(currentPokemon);
+        int candyCount = 0;
+        if (canEvolve) {
+            candyCount = evolutionMeta.getEvolution(currentPokemon).getEvolutionBranch().get(0).getCandyCost();
+
+            while (canEvolve) {
+                List<PokemonId> evos = evolutionMeta.getEvolutions(currentPokemon);
+                currentPokemon = evos.get(0);
+                System.out.println(currentPokemon);
+                canEvolve = evolutionMeta.canEvolve(currentPokemon);
+                if (canEvolve) {
+                    candyCount = candyCount + evolutionMeta.getEvolution(currentPokemon).getEvolutionBranch().get(0).getCandyCost();
+                }
+            }
         }
-        return candy;
+        return candyCount;
     }
-    public int getCandiesFromFamily(PokemonId pokemonID){
+
+    public int getCandiesFromFamily(PokemonId pokemonID) {
         List<Pokemon> myFamily = getFullFamily(pokemonID);
         return myFamily.get(0).getCandy();
     }
