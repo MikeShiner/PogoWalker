@@ -48,9 +48,8 @@ import walker.utils.*;
 public class Main {
 
     private static final OkHttpClient HTTPCLIENT = new OkHttpClient();
-    private static final Config config = new Config();
     private static final Random RANDOM = new Random();
-    private static final DAO database = new DAO();
+    private static final DAO DATABASE = new DAO();
 
     private static PokemonGo api;
     private static Double latitude = 0.0;
@@ -59,8 +58,8 @@ public class Main {
     private static final DecimalFormat f = new DecimalFormat("##.00");
 
     public static void main(String[] args) throws InterruptedException {
-        latitude = config.getLATITUDE();
-        longitude = config.getLONGITUDE();
+        latitude = Config.getLATITUDE();
+        longitude = Config.getLONGITUDE();
         startLooper();
     }
 
@@ -71,12 +70,12 @@ public class Main {
         while (looper) {
             api = null; // Reconnection reset
             try {
-                api = login(Config.getHASH_KEY(), config.getLOGIN(), config.getPASSWORD(), longitude, latitude);
+                api = login(Config.getHASH_KEY(), Config.getLOGIN(), Config.getPASSWORD(), longitude, latitude);
                 Inventory inv = new Inventory(api);
                 inv.printStock();
                 inv.clearItems();
-                MyPokedex myPokedex = new MyPokedex(api, database);
-                MyPokemon myPokemon = new MyPokemon(api, database);
+                MyPokedex myPokedex = new MyPokedex(api, DATABASE);
+                MyPokemon myPokemon = new MyPokemon(api, DATABASE);
                 printStats(inv, myPokemon, api.getPlayerProfile());
                 myPokemon.printMyPokemon();
                 catchArea(myPokedex, myPokemon, api);
@@ -230,8 +229,6 @@ public class Main {
 
         // Determine whether I have enough candies for final form evolution.
         PokemonId pokemonID = encounter.getEncounteredPokemon().getPokemonId();
-        // Current pokemon of this kind.
-        Pokemon currentPokemon = myPokemon.getPokemon(pokemonID);
 
         candiesNeeded = myPokemon.getCandiesToEvolve(pokemonID);
         currentCandyCount = myPokemon.getCandiesFromFamily(pokemonID);
@@ -285,7 +282,7 @@ public class Main {
             myPokemon.evolveMyBest(myFamilyBest.getPokemonId());
             myPokemon.update(api);
         }
-        requestChill("long");
+        requestChill("short");
 
     }
 

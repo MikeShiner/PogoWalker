@@ -7,6 +7,7 @@ package walker.classes;
 
 import POGOProtos.Enums.PokemonFamilyIdOuterClass.PokemonFamilyId;
 import POGOProtos.Enums.PokemonIdOuterClass.PokemonId;
+import POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId;
 import walker.utils.*;
 import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.inventory.PokeBank;
@@ -154,6 +155,7 @@ public class MyPokemon {
         List<Pokemon> evolutions = orderByIVsDesc(getFullFamily(pokemonID));
         Pokemon pokemonToEvolve = evolutions.get(0);
         boolean canIEvolve = pokemonToEvolve.canEvolve();
+        ItemId evolutionItem = null;
 
         for (Pokemon pokemon : evolutions) {
             System.out.println(pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
@@ -163,6 +165,14 @@ public class MyPokemon {
         evolutions.remove(0);
         transferPokemonList(evolutions);
         if (canIEvolve) {
+            evolutionItem = evolutionMeta.getEvolution(pokemonID).getEvolutionBranch().get(0).getEvolutionItemRequirement();
+        }
+        if (evolutionItem != null) {
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need an item to evolve this pokemon.. " + evolutionItem);
+            // TO DO APPLY ITEM LOGIC
+            // Need to check next evolution's requirement not this one.
+        }
+        while (canIEvolve && evolutionItem == null) {
             System.out.println("Evolving..");
             PokemonId startEvo = pokemonToEvolve.getPokemonId();
             EvolutionResult result = pokemonToEvolve.evolve();
@@ -171,6 +181,10 @@ public class MyPokemon {
                 Pokemon evolved = result.getEvolvedPokemon();
                 PokemonId finishEvo = evolved.getPokemonId();
                 canIEvolve = evolved.canEvolve();
+                evolutionItem = evolutionMeta.getEvolution(finishEvo).getEvolutionBranch().get(0).getEvolutionItemRequirement();
+                if (!evolutionItem.equals(ItemId.ITEM_UNKNOWN)) {
+                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need an item to evolve this pokemon.. " + evolutionItem);
+                }
                 Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Successfully evolved a " + startEvo + " into a " + finishEvo);
                 System.out.println("Can I evolve? " + canIEvolve);
             } else {
