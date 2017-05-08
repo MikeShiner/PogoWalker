@@ -261,7 +261,7 @@ public class Main {
                 for (Pokemon pokemon : topEvos) {
                     Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is " + pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%) better than " + encounterIV + "% ?");
                     if (pokemon.getIvInPercentage() < encounterIV) {
-                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes it is.. TRUE!");
+                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes it is.. TRUE!");
                         isItBetterIvs = true;
                         break;
                     }
