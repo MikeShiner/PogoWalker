@@ -226,7 +226,7 @@ public class Main {
         boolean isItBetterIvs = false;
         int currentCandyCount;
         int candiesNeeded;
-
+        // Do I Have Enough Candies
         // Determine whether I have enough candies for final form evolution.
         PokemonId pokemonID = encounter.getEncounteredPokemon().getPokemonId();
 
@@ -243,9 +243,36 @@ public class Main {
 
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "Do I need candy? " + !haveIGotEnoughCandies + " " + currentCandyCount + "/" + candiesNeeded);
         }
-        // Determine whether it's a better evolution
+        // Is It Better IVs?
+        // Determine whether it's a better evolution by first checking if it's a top-evo pokemon.
+        // If true, check IVs for top-evo (getTopEvolutions)
+        // If false, check IVs for lower-evo (getBottomEvolutions)
         double encounterIV = getPercentageIV(encounter.getEncounteredPokemon());
-        // Get my best pokemon from family
+
+        // Is it top evo?
+        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "IS IT TOP EVO?");
+        if (myPokemon.checkIfHighestEvo(pokemonID)) {
+            Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes. Checking top evos..");
+            List<Pokemon> topEvos = myPokemon.getTopEvolutions(pokemonID);
+            if (topEvos.isEmpty()) {
+                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "I don't have any top evos. ");
+                isItBetterIvs = true;
+            } else {
+                for (Pokemon pokemon : topEvos) {
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is " + pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%) better than " + encounterIV + "% ?");
+                    if (pokemon.getIvInPercentage() < encounterIV) {
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes it is.. TRUE!");
+                        isItBetterIvs = true;
+                        break;
+                    }
+                }
+            }
+
+        } else {
+            Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Not top evo. Checking lowers..");
+            // Get Lower Evos
+
+        }
         Pokemon myFamilyBest = myPokemon.orderByIVsDesc(myPokemon.getFullFamily(pokemonID)).get(0);
         if (encounterIV > myFamilyBest.getIvInPercentage()) {
             isItBetterIvs = true;

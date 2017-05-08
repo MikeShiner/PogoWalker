@@ -228,6 +228,50 @@ public class MyPokemon {
         Collections.sort(sortingList, ivSort);
         return sortingList;
     }
+    
+    /**
+     * @param pokemonID
+     * @param transferList 
+     * @return  List of top evolution pokemon from bag - highest IVs for duplicates
+     */
+    public List<Pokemon> getTopEvolutions(PokemonId pokemonID){
+        List<PokemonId> refList = new ArrayList<>();
+        List<Pokemon> familyList = orderByIVsDesc(getFullFamily(pokemonID));
+        List<PokemonId> topEvos = evolutionMeta.getHighest(pokemonID);
+        List<Pokemon> topEvoPokemon = new ArrayList<>();
+        // If pokemon is one of the top-evos 
+        for (Pokemon pokemon : familyList){
+            if(topEvos.contains(pokemon.getPokemonId()) && !refList.contains(pokemon.getPokemonId())){
+                topEvoPokemon.add(pokemon);                
+                refList.add(pokemon.getPokemonId()); 
+                System.out.println(pokemon.getPokemonId() + " " + pokemon.getIvInPercentage() + "%");
+            }
+        }
+        return topEvoPokemon;
+    }
+    /**
+     * 
+     * @param pokemonID
+     * @return List of bottom (all non-top) evos Pokemon from bag
+     */
+    public List<Pokemon> getLowerEvolutions(PokemonId pokemonID){
+        List<Pokemon> topevos = getTopEvolutions(pokemonID);
+        List<Pokemon> fullfamily = orderByIVsDesc(getFullFamily(pokemonID));
+        List<Pokemon> lowerEvos = new ArrayList<>();
+        
+        for (Pokemon pokemon : fullfamily){
+            if (!topevos.contains(pokemon)) {
+                lowerEvos.add(pokemon);
+            }
+        }
+        
+        return lowerEvos;
+    }
+    
+    public boolean checkIfHighestEvo(PokemonId pokemonID){
+        List<PokemonId> topEvos = evolutionMeta.getHighest(pokemonID);
+        return topEvos.contains(pokemonID);
+    }
 
     public void transferPokemonList(List<Pokemon> transferList) {
         if (transferList.size() > 0) {
