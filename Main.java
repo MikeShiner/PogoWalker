@@ -251,41 +251,40 @@ public class Main {
 
         // Is it top evo?
         Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "IS IT TOP EVO?");
-        if (myPokemon.checkIfHighestEvo(pokemonID)) {
-            Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes. Checking top evos..");
-            List<Pokemon> topEvos = myPokemon.getTopEvolutions(pokemonID);
-            if (topEvos.isEmpty()) {
-                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "I don't have any top evos. ");
-                isItBetterIvs = true;
-            } else {
-                for (Pokemon pokemon : topEvos) {
-                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is " + pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%) better than " + encounterIV + "% ?");
-                    if (pokemon.getIvInPercentage() < encounterIV) {
-                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes it is.. TRUE!");
-                        isItBetterIvs = true;
-                        break;
-                    }
+        boolean isItTopEvo = myPokemon.checkIfHighestEvo(pokemonID);
+        List<Pokemon> searchList;
+        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, isItTopEvo + ". Searching" + (isItTopEvo ? "Top" : "Lower") + " evos..");
+        // If top evo, get top searchable top-evo pokemon list
+        if (isItTopEvo) {
+            searchList = myPokemon.getTopEvolutions(pokemonID);
+        } else {
+            // Otherwise get lower level ones
+            searchList = myPokemon.getLowerEvolutions(pokemonID);
+        }
+        if (searchList.isEmpty()) {
+            Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "I don't have any to compare it to. ");
+            isItBetterIvs = true;
+        } else {
+            // I have a top evo
+            for (Pokemon pokemon : searchList) {
+                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is " + pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%) better than " + encounterIV + "% ?");
+                if (pokemon.getIvInPercentage() < encounterIV) {
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes it is.. TRUE!");
+                    isItBetterIvs = true;
+                    break;
                 }
             }
-
-        } else {
-            Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Not top evo. Checking lowers..");
-            // Get Lower Evos
-
         }
-        Pokemon myFamilyBest = myPokemon.orderByIVsDesc(myPokemon.getFullFamily(pokemonID)).get(0);
-        if (encounterIV > myFamilyBest.getIvInPercentage()) {
-            isItBetterIvs = true;
-        }
-        Logger.INSTANCE.Log(Logger.TYPE.INFO, "Is it better than the one I've got? " + isItBetterIvs + " Mines: " + myFamilyBest.getPokemonId() + "(" + myFamilyBest.getIvInPercentage() + "%) Vs. " + f.format(encounterIV) + "%");
+        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is it better IVs? " + isItBetterIvs);
 
         // Decision logic //
         if (haveIGotEnoughCandies && isItBetterIvs) {
-            Logger.INSTANCE.Log(Logger.TYPE.INFO, "I can evolve this to max & it's the best IV one i've seen! .. I should catch it and evolve it!");
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "I can evolve this to max & it's got good IVs! .. I should catch it and evolve what I can!");
             Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer old copy of pokemon
 
             if (caughtPokemon != null) {
                 myPokemon.update(api);
+                myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
                 myPokemon.evolveMyBest(caughtPokemon.getPokemonId());
             }
         } else if (!haveIGotEnoughCandies && isItBetterIvs) {
@@ -293,7 +292,7 @@ public class Main {
             Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer old copy of pokemon
             if (caughtPokemon != null) {
                 myPokemon.update(api);
-                myPokemon.transferPokemon(myFamilyBest);
+                myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
             }
         } else if (!haveIGotEnoughCandies && !isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need the candy and it's not as good. I'l catch it and transfer it.");
@@ -306,7 +305,7 @@ public class Main {
         } else if (haveIGotEnoughCandies && !isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "Don't need the candy and it's worse IV one. I'l leave it I reckon.");
             // Don't bother catching - don't need it. - But spend your candy evolving the type!
-            myPokemon.evolveMyBest(myFamilyBest.getPokemonId());
+            myPokemon.evolveMyBest(pokemonID);
             myPokemon.update(api);
         }
         requestChill("short");
@@ -318,7 +317,8 @@ public class Main {
         PokeBank pokebank = api.getInventories().getPokebank();
         Pokemon caughtPokemon = null;
         if (encounter.isSuccessful()) {
-            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encountered: " + encounter.getEncounteredPokemon().getPokemonId());
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encountered: " + encounter.getEncounteredPokemon().getPokemonId() + 
+                    "(" + getPercentageIV(encounter.getEncounteredPokemon()) + "%)");
 
             List<Pokeball> usablePokeballs = bag.getUsablePokeballs();
             if (usablePokeballs.size() > 0) {
@@ -413,6 +413,8 @@ public class Main {
                 });
             } catch (Exception ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Error Logging in. " + ex.toString());
+                requestChill("long");
+                requestChill("long");
                 requestChill("long");
             }
         }

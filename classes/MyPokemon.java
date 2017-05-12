@@ -141,7 +141,7 @@ public class MyPokemon {
 
     /**
      * Transfers Pokemon which are not a top evolution and also not the highest
-     * IV lower-evo
+     * IV lower-evo.
      *
      * @param pokemonID
      */
@@ -160,15 +160,15 @@ public class MyPokemon {
 
         // If FullFamily pokemon not highest-evo or highest lower-evo, add to transferList.
         for (Pokemon pokemon : evolutions) {
+            Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Judging Pokemon: " + pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
             if (!topEvos.contains(pokemon) && (bottomEvo != null && !pokemon.equals(bottomEvo))) {
-                transferList.add(pokemon);
-                System.out.println("Adding to transfer: " + pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
+                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Transfer List!");
             } else {
-                System.out.println("Safe List: " + pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
+                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Safe List!");
 
             }
         }
-//        transferPokemonList(transferList);
+        transferPokemonList(transferList);
     }
 
     public void evolveMyBest(PokemonId pokemonID) throws RequestFailedException, InterruptedException {
