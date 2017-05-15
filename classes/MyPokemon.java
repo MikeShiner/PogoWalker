@@ -139,58 +139,40 @@ public class MyPokemon {
         transferPokemonList(transferList);
     }
 
+    /**
+     * Transfers Pokemon which are not a top evolution and also not the highest
+     * IV lower-evo.
+     *
+     * @param pokemonID
+     */
     public void transferInsuperior(PokemonId pokemonID) {
         List<Pokemon> evolutions = orderByIVsDesc(getFullFamily(pokemonID));
-
-        for (Pokemon pokemon : evolutions) {
-            System.out.println(pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
+        // Unique list of highest IV evos. No duplications.
+        List<Pokemon> topEvos = getTopEvolutions(pokemonID);
+        // Best bottom Evo (to keep)
+        List<Pokemon> lowerEvos = orderByIVsDesc(getLowerEvolutions(pokemonID));
+        Pokemon bottomEvo = null;
+        if (lowerEvos.size() > 0) {
+            bottomEvo = lowerEvos.get(0);
         }
 
-        // Remove Highest IV from the transfer list
-        evolutions.remove(0);
-        transferPokemonList(evolutions);
+        List<Pokemon> transferList = new ArrayList<>();
+
+        // If FullFamily pokemon not highest-evo or highest lower-evo, add to transferList.
+        for (Pokemon pokemon : evolutions) {
+            Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Judging Pokemon: " + pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
+            if (!topEvos.contains(pokemon) && (bottomEvo != null && !pokemon.equals(bottomEvo))) {
+                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Transfer List!");
+            } else {
+                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Safe List!");
+
+            }
+        }
+        transferPokemonList(transferList);
     }
 
     public void evolveMyBest(PokemonId pokemonID) throws RequestFailedException, InterruptedException {
-        List<Pokemon> evolutions = orderByIVsDesc(getFullFamily(pokemonID));
-        Pokemon pokemonToEvolve = evolutions.get(0);
-        boolean canIEvolve = pokemonToEvolve.canEvolve();
-        ItemId evolutionItem = null;
-
-        for (Pokemon pokemon : evolutions) {
-            System.out.println(pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
-        }
-
-        // Remove Highest IV from the transfer list
-        evolutions.remove(0);
-        transferPokemonList(evolutions);
-        if (canIEvolve) {
-            evolutionItem = evolutionMeta.getEvolution(pokemonID).getEvolutionBranch().get(0).getEvolutionItemRequirement();
-        }
-        if (evolutionItem != null) {
-            Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need an item to evolve this pokemon.. " + evolutionItem);
-            // TO DO APPLY ITEM LOGIC
-            // Need to check next evolution's requirement not this one.
-        }
-        while (canIEvolve && evolutionItem == null) {
-            System.out.println("Evolving..");
-            PokemonId startEvo = pokemonToEvolve.getPokemonId();
-            EvolutionResult result = pokemonToEvolve.evolve();
-            if (result.isSuccessful()) {
-                Thread.sleep(6000);
-                Pokemon evolved = result.getEvolvedPokemon();
-                PokemonId finishEvo = evolved.getPokemonId();
-                canIEvolve = evolved.canEvolve();
-                evolutionItem = evolutionMeta.getEvolution(finishEvo).getEvolutionBranch().get(0).getEvolutionItemRequirement();
-                if (!evolutionItem.equals(ItemId.ITEM_UNKNOWN)) {
-                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need an item to evolve this pokemon.. " + evolutionItem);
-                }
-                Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Successfully evolved a " + startEvo + " into a " + finishEvo);
-                System.out.println("Can I evolve? " + canIEvolve);
-            } else {
-                System.out.println("Evolve unsuccessfull.");
-            }
-        }
+        List<Pokemon> evolist = getLowerEvolutions(pokemonID);
     }
 
     public int getCandiesToEvolve(PokemonId pokemonID) {
@@ -227,6 +209,52 @@ public class MyPokemon {
         };
         Collections.sort(sortingList, ivSort);
         return sortingList;
+    }
+
+    /**
+     * @param pokemonID
+     * @param transferList
+     * @return List of top evolution pokemon from bag - highest IVs for
+     * duplicates
+     */
+    public List<Pokemon> getTopEvolutions(PokemonId pokemonID) {
+        List<PokemonId> refList = new ArrayList<>();
+        List<Pokemon> familyList = orderByIVsDesc(getFullFamily(pokemonID));
+        List<PokemonId> topEvos = evolutionMeta.getHighest(pokemonID);
+        List<Pokemon> topEvoPokemon = new ArrayList<>();
+        // If pokemon is one of the top-evos 
+        for (Pokemon pokemon : familyList) {
+            if (topEvos.contains(pokemon.getPokemonId()) && !refList.contains(pokemon.getPokemonId())) {
+                topEvoPokemon.add(pokemon);
+                refList.add(pokemon.getPokemonId());
+                System.out.println(pokemon.getPokemonId() + " " + pokemon.getIvInPercentage() + "%");
+            }
+        }
+        return topEvoPokemon;
+    }
+
+    /**
+     *
+     * @param pokemonID
+     * @return List of bottom (all non-top) evos Pokemon from bag
+     */
+    public List<Pokemon> getLowerEvolutions(PokemonId pokemonID) {
+        List<Pokemon> topevos = getTopEvolutions(pokemonID);
+        List<Pokemon> fullfamily = orderByIVsDesc(getFullFamily(pokemonID));
+        List<Pokemon> lowerEvos = new ArrayList<>();
+
+        for (Pokemon pokemon : fullfamily) {
+            if (!topevos.contains(pokemon)) {
+                lowerEvos.add(pokemon);
+            }
+        }
+
+        return lowerEvos;
+    }
+
+    public boolean checkIfHighestEvo(PokemonId pokemonID) {
+        List<PokemonId> topEvos = evolutionMeta.getHighest(pokemonID);
+        return topEvos.contains(pokemonID);
     }
 
     public void transferPokemonList(List<Pokemon> transferList) {
