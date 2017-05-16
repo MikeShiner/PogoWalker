@@ -5,6 +5,8 @@
  */
 package walker.classes;
 
+import POGOProtos.Inventory.Item.ItemIdOuterClass;
+import POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId;
 import static POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId.*;
 import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.inventory.Item;
@@ -41,6 +43,9 @@ public class Inventory {
     int incense_count = 0;
     int revives_count = 0;
     int metal_coat = 0;
+    int dragon_scale = 0;
+    int kings_rock = 0;
+    int upgrade = 0;
 
     int bagCount = 0;
     int bagMax = 0;
@@ -77,7 +82,10 @@ public class Inventory {
         incense_count = bag.getItem(ITEM_INCENSE_ORDINARY).getCount();
         revives_count = bag.getItem(ITEM_REVIVE).getCount();
         metal_coat = bag.getItem(ITEM_METAL_COAT).getCount();
-
+        dragon_scale = bag.getItem(ITEM_DRAGON_SCALE).getCount();
+        kings_rock = bag.getItem(ITEM_KINGS_ROCK).getCount();
+        upgrade = bag.getItem(ITEM_UP_GRADE).getCount();
+        
         razzberries = bag.getItem(ITEM_RAZZ_BERRY).getCount();
         nanabberries = bag.getItem(ITEM_NANAB_BERRY).getCount();
         pinapberries = bag.getItem(ITEM_PINAP_BERRY).getCount();
@@ -150,6 +158,10 @@ public class Inventory {
 
     public List<Pokeball> getUsablePokeballs() {
         return usablePokeballs;
+    }
+    
+    public boolean checkHasItem(ItemId item){
+        return bag.getItem(item).getCount() > 0;
     }
 
 }

@@ -79,7 +79,7 @@ public class Main {
                 MyPokemon myPokemon = new MyPokemon(api, DATABASE);
                 printStats(inv, myPokemon, api.getPlayerProfile());
                 myPokemon.printMyPokemon();
-                catchArea(myPokedex, myPokemon, api);
+                catchArea(myPokedex, myPokemon, inv, api);
                 while (true) {
                     List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
                     walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
@@ -164,7 +164,7 @@ public class Main {
                         //Sleep for 2 seconds before setting the location again
                         requestChill("short");
                         if (counter % 4 == 0 && inv.getBalls_total() > 10) {
-                            catchArea(pokedex, myPkmn, api);
+                            catchArea(pokedex, myPkmn, inv, api);
                         }
                         counter++;
                     }
@@ -179,7 +179,7 @@ public class Main {
                 inv.update(api);
                 requestChill("short");
                 if (inv.getBalls_total() > 20) {
-                    catchArea(pokedex, myPkmn, api);
+                    catchArea(pokedex, myPkmn, inv, api);
                 }
             }
         } catch (Exception ex) {
@@ -188,7 +188,7 @@ public class Main {
         }
     }
 
-    private static void catchArea(MyPokedex pokedex, MyPokemon myPkmn, PokemonGo api) throws RequestFailedException, InterruptedException, NoSuchItemException {
+    private static void catchArea(MyPokedex pokedex, MyPokemon myPkmn, Inventory inv, PokemonGo api) throws RequestFailedException, InterruptedException, NoSuchItemException {
         Set<CatchablePokemon> catchable = api.getMap().getMapObjects().getPokemon();
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's " + catchable.size() + " pokemon around me.");
 
@@ -201,7 +201,7 @@ public class Main {
 
                 Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encounted a " + cp.getPokemonId());
                 if (!newPokedexEntry) {
-                    processPokemon(encounter, myPkmn, api);
+                    processPokemon(encounter, myPkmn, pokedex, inv, api);
                 } else {
                     Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's a " + cp.getPokemonId() + " and I need it for my Pokedex!");
                     catchPokemon(encounter, api);
@@ -222,7 +222,7 @@ public class Main {
      * @param encounter
      * @param myPokemon
      */
-    private static void processPokemon(Encounter encounter, MyPokemon myPokemon, PokemonGo api) throws RequestFailedException, InterruptedException, NoSuchItemException {
+    private static void processPokemon(Encounter encounter, MyPokemon myPokemon, MyPokedex pokedex, Inventory inv, PokemonGo api) throws RequestFailedException, InterruptedException, NoSuchItemException {
         boolean haveIGotEnoughCandies = false;
         boolean isItBetterIvs = false;
         int currentCandyCount;
@@ -268,7 +268,9 @@ public class Main {
         } else {
             // I have a top evo
             for (Pokemon pokemon : searchList) {
-                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is " + pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%) better than " + encounterIV + "% ?");
+
+                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is " + pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%) better than encountered: " + encounterIV + "% ?");
+
                 if (pokemon.getIvInPercentage() < encounterIV) {
                     Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes it is.. TRUE!");
                     isItBetterIvs = true;
@@ -285,14 +287,23 @@ public class Main {
 
             if (caughtPokemon != null) {
                 myPokemon.update(api);
+
+                requestChill("long");
+                requestChill("long");
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
-                myPokemon.evolveMyBest(caughtPokemon.getPokemonId());
+                myPokemon.evolveMyBest(caughtPokemon.getPokemonId(), pokedex, inv);
+
+
             }
         } else if (!haveIGotEnoughCandies && isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need the candy and it's a better one than I have.. I will catch it and transfer the old one.");
             Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer old copy of pokemon
             if (caughtPokemon != null) {
                 myPokemon.update(api);
+
+                requestChill("long");
+                requestChill("long");
+
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
             }
         } else if (!haveIGotEnoughCandies && !isItBetterIvs) {
@@ -301,13 +312,17 @@ public class Main {
             Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer this pokemon
             if (caughtPokemon != null) {
                 myPokemon.update(api);
+                requestChill("long");
+                requestChill("long");
                 myPokemon.transferPokemon(caughtPokemon);
             }
         } else if (haveIGotEnoughCandies && !isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "Don't need the candy and it's worse IV one. I'l leave it I reckon.");
             // Don't bother catching - don't need it. - But spend your candy evolving the type!
+
             myPokemon.evolveMyBest(pokemonID);
             myPokemon.update(api);
+
         }
         requestChill("short");
 
