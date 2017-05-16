@@ -157,6 +157,7 @@ public class MyPokemon {
             bottomEvo = lowerEvos.get(0);
         }
 
+
         List<Pokemon> transferList = new ArrayList<>();
 
         // If FullFamily pokemon not highest-evo or highest lower-evo, add to transferList.
@@ -265,7 +266,6 @@ public class MyPokemon {
             }
             Thread.sleep(5000);
         }
-
     }
 
     public int getCandiesToEvolve(PokemonId pokemonID) {

@@ -50,27 +50,28 @@ public class Main {
     private static final OkHttpClient HTTPCLIENT = new OkHttpClient();
     private static final Random RANDOM = new Random();
     private static final DAO DATABASE = new DAO();
+    private static final Config config = new Config();
+    private static double currLongitude = 0.0;
+    private static double currLatitude = 0.0;
 
     private static PokemonGo api;
-    private static Double latitude = 0.0;
-    private static Double longitude = 0.0;
     private static int level = 0;
     private static final DecimalFormat f = new DecimalFormat("##.00");
 
-    public static void main(String[] args) throws InterruptedException {
-        latitude = Config.getLATITUDE();
-        longitude = Config.getLONGITUDE();
+    public static void main(String[] args) throws InterruptedException {        
         startLooper();
+        currLatitude = config.getLATITUDE();
+        currLongitude = config.getLONGITUDE();
     }
 
     private static void startLooper() {
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "START: Logging in...");
         boolean looper = true;
-
+        
         while (looper) {
             api = null; // Reconnection reset
             try {
-                api = login(Config.getHASH_KEY(), Config.getLOGIN(), Config.getPASSWORD(), longitude, latitude);
+                api = login(config.getHASH_KEY(), config.getLOGIN(), config.getPASSWORD(), config.getLONGITUDE(), config.getLATITUDE());
                 Inventory inv = new Inventory(api);
                 inv.printStock();
                 inv.clearItems();
@@ -157,8 +158,8 @@ public class Main {
                         //Set the API location to that point
                         api.setLatitude(point.getLatitude());
                         // Update current bot location for re-logon
-                        latitude = point.getLatitude();
-                        longitude = point.getLongitude();
+                        currLatitude = point.getLatitude();
+                        currLongitude = point.getLongitude();
                         api.setLongitude(point.getLongitude());
                         //Sleep for 2 seconds before setting the location again
                         requestChill("short");
@@ -267,7 +268,9 @@ public class Main {
         } else {
             // I have a top evo
             for (Pokemon pokemon : searchList) {
+
                 Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Is " + pokemon.getPokemonId() + "(" + pokemon.getIvInPercentage() + "%) better than encountered: " + encounterIV + "% ?");
+
                 if (pokemon.getIvInPercentage() < encounterIV) {
                     Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Yes it is.. TRUE!");
                     isItBetterIvs = true;
@@ -284,18 +287,23 @@ public class Main {
 
             if (caughtPokemon != null) {
                 myPokemon.update(api);
+
                 requestChill("long");
                 requestChill("long");
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
                 myPokemon.evolveMyBest(caughtPokemon.getPokemonId(), pokedex, inv);
+
+
             }
         } else if (!haveIGotEnoughCandies && isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need the candy and it's a better one than I have.. I will catch it and transfer the old one.");
             Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer old copy of pokemon
             if (caughtPokemon != null) {
                 myPokemon.update(api);
+
                 requestChill("long");
                 requestChill("long");
+
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
             }
         } else if (!haveIGotEnoughCandies && !isItBetterIvs) {
@@ -311,7 +319,10 @@ public class Main {
         } else if (haveIGotEnoughCandies && !isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "Don't need the candy and it's worse IV one. I'l leave it I reckon.");
             // Don't bother catching - don't need it. - But spend your candy evolving the type!
-            myPokemon.evolveMyBest(pokemonID, pokedex, inv); 
+
+            myPokemon.evolveMyBest(pokemonID);
+            myPokemon.update(api);
+
         }
         requestChill("short");
 
