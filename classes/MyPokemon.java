@@ -8,6 +8,7 @@ package walker.classes;
 import POGOProtos.Enums.PokemonFamilyIdOuterClass.PokemonFamilyId;
 import POGOProtos.Enums.PokemonIdOuterClass.PokemonId;
 import POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId;
+import POGOProtos.Settings.Master.Pokemon.EvolutionBranchOuterClass.EvolutionBranch;
 import walker.utils.*;
 import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.inventory.PokeBank;
@@ -171,8 +172,100 @@ public class MyPokemon {
         transferPokemonList(transferList);
     }
 
-    public void evolveMyBest(PokemonId pokemonID) throws RequestFailedException, InterruptedException {
-        List<Pokemon> evolist = getLowerEvolutions(pokemonID);
+    public void evolveMyBest(PokemonId pokemonID, MyPokedex pokedex, Inventory inv) throws RequestFailedException, InterruptedException {
+        PokemonId chosenPokemon;
+        boolean canEvolve = true;
+
+        EvolutionBranch branchToPursue = null;
+        EvolutionBranch betterIVEvo = null;
+
+
+        chosenPokemon = pokemonID;
+        while (canEvolve) {
+            canEvolve = false;
+            List<Pokemon> evolist = getLowerEvolutions(chosenPokemon);
+            if (evolist.size() < 1) {
+                Logger.INSTANCE.Log(Logger.TYPE.INFO, "No pokemon to evolve");
+
+            } else {
+                Pokemon pokemonToEvolve = evolist.get(0);
+                Logger.INSTANCE.Log(Logger.TYPE.INFO, "Looking to evolve: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%)");
+
+                List<EvolutionBranch> evolutionBranches = evolutionMeta.getEvolution(chosenPokemon).getEvolutionBranch();
+
+                // Cycle through evolutions to determine which is best to evolve into.
+                for (EvolutionBranch evoBranch : evolutionBranches) {
+                    PokemonId evoID = evoBranch.getEvolution();
+
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Potentional Evolution: " + evoID);
+
+                    boolean needToCatch = pokedex.doINeed(evoID);
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Do I Need? " + needToCatch);
+
+                    int itemrequired = evoBranch.getEvolutionItemRequirementValue();
+                    ItemId requiredItem = evoBranch.getEvolutionItemRequirement();
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Item Required? " + (itemrequired > 0 ? "Yes: " + requiredItem : "No."));
+                    boolean itemCheck = true;
+                    if (itemrequired > 0) {
+                        itemCheck = inv.checkHasItem(requiredItem);
+                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Do I Have this Item? " + itemCheck);
+                    }
+                    if (itemCheck) {
+                        if (needToCatch) {
+
+                            branchToPursue = evoBranch;
+                            break;
+                        } else {
+                            Pokemon myEvo = getPokemon(evoID);
+                            if (myEvo != null) {
+                                Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "I have a " + myEvo.getPokemonId() + " (" + myEvo.getIvInPercentage() + "%) VS "
+                                        + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%)");
+                                // If I have a copy of this evo - compare IVS
+                                if (myEvo.getIvInPercentage() < pokemonToEvolve.getIvInPercentage()) {
+                                    betterIVEvo = evoBranch;
+                                }
+                            } else {
+                                // Don't currently have this evo in bag. Catch.
+                                betterIVEvo = evoBranch;
+                            }
+                        }
+                    }
+                }
+
+                EvolutionBranch targetEvolution = branchToPursue != null ? branchToPursue : betterIVEvo;
+
+                if (targetEvolution != null) {
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Looking to evolve: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%) into " + targetEvolution);
+                    // Does it require an item?
+                    EvolutionResult result;
+                    
+                    if (targetEvolution.getEvolutionItemRequirementValue() > 0) {
+                        // Requires an item!
+                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Evolving with item! ");
+                        result = pokemonToEvolve.evolve(targetEvolution.getEvolutionItemRequirement());
+                    } else {
+                        result = pokemonToEvolve.evolve();
+                    }
+                    
+                    if (result.isSuccessful()) {
+
+                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "---- Evolution Success! ---- ");
+                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "-- New Pokemon: " + result.getEvolvedPokemon().getPokemonId());
+                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "-- Exp Gained: " + result.getExpAwarded());
+                        canEvolve = result.getEvolvedPokemon().canEvolve();
+                        chosenPokemon = result.getEvolvedPokemon().getPokemonId();
+                        
+                    } else {
+                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "---- Evolution Failed! ---- ");
+                    }
+
+                } else {
+                    Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "No target Evoltions to do!");
+                }
+            }
+            Thread.sleep(5000);
+        }
+
     }
 
     public int getCandiesToEvolve(PokemonId pokemonID) {
@@ -227,7 +320,6 @@ public class MyPokemon {
             if (topEvos.contains(pokemon.getPokemonId()) && !refList.contains(pokemon.getPokemonId())) {
                 topEvoPokemon.add(pokemon);
                 refList.add(pokemon.getPokemonId());
-                System.out.println(pokemon.getPokemonId() + " " + pokemon.getIvInPercentage() + "%");
             }
         }
         return topEvoPokemon;
