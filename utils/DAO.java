@@ -88,6 +88,7 @@ public class DAO {
                     }
                 } catch (Exception ex) {
                     System.out.println("Error updating Pokebag: " + ex.toString());
+                    ex.printStackTrace();
                 }
             }
         });

@@ -13,6 +13,9 @@ public class Config {
     private static double LONGITUDE = -1.8762018;
     private static double ALTITUDE = 0.0;
     private static String HASH_KEY = "5M1O7O8L1L7T0S3L6C1S";
+    private static String PROXY_ADDRESS;
+    private static String PROXY_USERNAME;
+    private static String PROXY_PASSWORD;
 
     public Config() {
         final String CONFIGFILE = "config.ini";
@@ -47,6 +50,14 @@ public class Config {
                                 break;
                             case "hashkey":
                                 HASH_KEY = value;
+                                break;
+                            case "proxyaddress":
+                                PROXY_ADDRESS = value;
+                                break;
+                            case "proxyusername":
+                                PROXY_USERNAME = value;
+                            case "proxypassword":
+                                PROXY_PASSWORD = value;
                         }
                     }
                 }

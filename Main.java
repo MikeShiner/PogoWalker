@@ -47,7 +47,7 @@ import walker.utils.*;
  */
 public class Main {
 
-    private static final OkHttpClient HTTPCLIENT = new OkHttpClient();
+    private static OkHttpClient HTTPCLIENT;
     private static final Random RANDOM = new Random();
     private static final DAO DATABASE = new DAO();
     private static final Config config = new Config();
@@ -58,7 +58,8 @@ public class Main {
     private static int level = 0;
     private static final DecimalFormat f = new DecimalFormat("##.00");
 
-    public static void main(String[] args) throws InterruptedException {        
+    public static void main(String[] args) throws InterruptedException {
+        HTTPCLIENT = new OkHttpClient();
         startLooper();
         currLatitude = config.getLATITUDE();
         currLongitude = config.getLONGITUDE();
@@ -67,18 +68,20 @@ public class Main {
     private static void startLooper() {
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "START: Logging in...");
         boolean looper = true;
-        
+
         while (looper) {
             api = null; // Reconnection reset
             try {
                 api = login(config.getHASH_KEY(), config.getLOGIN(), config.getPASSWORD(), config.getLONGITUDE(), config.getLATITUDE());
-                Inventory inv = new Inventory(api);
+                Inventory inv = new Inventory(api, DATABASE);
                 inv.printStock();
                 inv.clearItems();
                 MyPokedex myPokedex = new MyPokedex(api, DATABASE);
                 MyPokemon myPokemon = new MyPokemon(api, DATABASE);
+                
                 printStats(inv, myPokemon, api.getPlayerProfile());
-                myPokemon.printMyPokemon();
+                myPokemon.printBagStats();
+//                myPokemon.listPokemon(api);
                 catchArea(myPokedex, myPokemon, inv, api);
                 while (true) {
                     List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
@@ -293,7 +296,6 @@ public class Main {
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
                 myPokemon.evolveMyBest(caughtPokemon.getPokemonId(), pokedex, inv);
 
-
             }
         } else if (!haveIGotEnoughCandies && isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need the candy and it's a better one than I have.. I will catch it and transfer the old one.");
@@ -320,8 +322,9 @@ public class Main {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "Don't need the candy and it's worse IV one. I'l leave it I reckon.");
             // Don't bother catching - don't need it. - But spend your candy evolving the type!
 
-            myPokemon.evolveMyBest(pokemonID);
+            myPokemon.evolveMyBest(pokemonID, pokedex, inv);
             myPokemon.update(api);
+            myPokemon.transferInsuperior(pokemonID);
 
         }
         requestChill("short");
@@ -333,8 +336,8 @@ public class Main {
         PokeBank pokebank = api.getInventories().getPokebank();
         Pokemon caughtPokemon = null;
         if (encounter.isSuccessful()) {
-            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encountered: " + encounter.getEncounteredPokemon().getPokemonId() + 
-                    "(" + getPercentageIV(encounter.getEncounteredPokemon()) + "%)");
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encountered: " + encounter.getEncounteredPokemon().getPokemonId()
+                    + "(" + getPercentageIV(encounter.getEncounteredPokemon()) + "%)");
 
             List<Pokeball> usablePokeballs = bag.getUsablePokeballs();
             if (usablePokeballs.size() > 0) {
@@ -429,7 +432,6 @@ public class Main {
                 });
             } catch (Exception ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Error Logging in. " + ex.toString());
-                requestChill("long");
                 requestChill("long");
                 requestChill("long");
             }
