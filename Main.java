@@ -29,6 +29,9 @@ import com.pokegoapi.util.hash.HashProvider;
 import com.pokegoapi.util.hash.pokehash.PokeHashKey;
 import com.pokegoapi.util.hash.pokehash.PokeHashProvider;
 import com.pokegoapi.util.path.Path;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,7 +40,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
-import okhttp3.OkHttpClient;
+import java.util.concurrent.TimeUnit;
+import okhttp3.Authenticator;
+import okhttp3.*;
 import walker.classes.*;
 import walker.utils.*;
 
@@ -59,7 +64,30 @@ public class Main {
     private static final DecimalFormat f = new DecimalFormat("##.00");
 
     public static void main(String[] args) throws InterruptedException {
-        HTTPCLIENT = new OkHttpClient();
+//        HTTPCLIENT = new OkHttpClient();
+        int proxyPort = 3128;
+        String proxyHost = "210.203.20.9";
+        final String username = "username";
+        final String password = "password";
+
+//        Authenticator proxyAuthenticator = new Authenticator() {
+//            @Override
+//            public Request authenticate(Route route, Response response) throws IOException {
+//                String credential = Credentials.basic(username, password);
+//                return response.request().newBuilder()
+//                        .header("Proxy-Authorization", credential)
+//                        .build();
+//            }
+//        };
+
+        HTTPCLIENT = new OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)))
+//                .proxyAuthenticator(proxyAuthenticator)
+                .build();
+        
         startLooper();
         currLatitude = config.getLATITUDE();
         currLongitude = config.getLONGITUDE();
@@ -78,7 +106,7 @@ public class Main {
                 inv.clearItems();
                 MyPokedex myPokedex = new MyPokedex(api, DATABASE);
                 MyPokemon myPokemon = new MyPokemon(api, DATABASE);
-                
+
                 printStats(inv, myPokemon, api.getPlayerProfile());
                 myPokemon.printBagStats();
 //                myPokemon.listPokemon(api);

@@ -232,8 +232,14 @@ public class MyPokemon {
                         }
                     }
                 }
-
-                EvolutionBranch targetEvolution = branchToPursue != null ? branchToPursue : betterIVEvo;
+                boolean newCatch = false; // Keep track if event to see if it's a new Pokedex Entry!
+                EvolutionBranch targetEvolution;
+                if (branchToPursue != null) {
+                    targetEvolution = branchToPursue;
+                    newCatch = true;
+                } else {
+                    targetEvolution = betterIVEvo;
+                }
 
                 if (targetEvolution != null) {
                     Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Looking to evolve: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%) into " + targetEvolution);
@@ -252,7 +258,11 @@ public class MyPokemon {
 
                         Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "---- Evolution Success! ---- ");
                         Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "-- New Pokemon: " + result.getEvolvedPokemon().getPokemonId());
-                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "-- Exp Gained: " + result.getExpAwarded());
+                        Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Evolution: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%) To " + result.getEvolvedPokemon().getPokemonId() + " (" + result.getEvolvedPokemon().getIvInPercentage() + "%)");
+                        if (newCatch) {
+                            Logger.INSTANCE.Log(Logger.TYPE.EVENT, "New Pokedex Entry! " + result.getEvolvedPokemon().getPokemonId());
+                        }
+
                         canEvolve = result.getEvolvedPokemon().canEvolve();
                         chosenPokemon = result.getEvolvedPokemon().getPokemonId();
 
