@@ -21,10 +21,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  *
@@ -55,11 +53,14 @@ public class MyPokemon {
         database.updatePokebag(pokemons);
     }
 
-    public void printBagStats() {
-        System.out.println("My Pokemon: " + pokemons.size() + "/" + pokebag.getMaxStorage());
+    public void listPokemon(PokemonGo api) {
+        for (Pokemon pokemon : api.getInventories().getPokebank().getPokemons()) {
+
+            System.out.println("My Pokemon: " + pokemon.getPokemonId());
+        }
     }
 
-    public void printMyPokemon() {
+    public void printBagStats() {
         System.out.println("Your pokemon: " + pokemons.size() + "/" + pokebag.getMaxStorage());
 
     }
@@ -157,7 +158,6 @@ public class MyPokemon {
             bottomEvo = lowerEvos.get(0);
         }
 
-
         List<Pokemon> transferList = new ArrayList<>();
 
         // If FullFamily pokemon not highest-evo or highest lower-evo, add to transferList.
@@ -165,6 +165,7 @@ public class MyPokemon {
             Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Judging Pokemon: " + pokemon.getPokemonId() + " (" + pokemon.getIvInPercentage() + "%)");
             if (!topEvos.contains(pokemon) && (bottomEvo != null && !pokemon.equals(bottomEvo))) {
                 Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Transfer List!");
+                transferList.add(pokemon);
             } else {
                 Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Safe List!");
 
@@ -179,7 +180,6 @@ public class MyPokemon {
 
         EvolutionBranch branchToPursue = null;
         EvolutionBranch betterIVEvo = null;
-
 
         chosenPokemon = pokemonID;
         while (canEvolve) {
@@ -232,14 +232,20 @@ public class MyPokemon {
                         }
                     }
                 }
-
-                EvolutionBranch targetEvolution = branchToPursue != null ? branchToPursue : betterIVEvo;
+                boolean newCatch = false; // Keep track if event to see if it's a new Pokedex Entry!
+                EvolutionBranch targetEvolution;
+                if (branchToPursue != null) {
+                    targetEvolution = branchToPursue;
+                    newCatch = true;
+                } else {
+                    targetEvolution = betterIVEvo;
+                }
 
                 if (targetEvolution != null) {
                     Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Looking to evolve: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%) into " + targetEvolution);
                     // Does it require an item?
                     EvolutionResult result;
-                    
+
                     if (targetEvolution.getEvolutionItemRequirementValue() > 0) {
                         // Requires an item!
                         Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "Evolving with item! ");
@@ -247,15 +253,19 @@ public class MyPokemon {
                     } else {
                         result = pokemonToEvolve.evolve();
                     }
-                    
+
                     if (result.isSuccessful()) {
 
                         Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "---- Evolution Success! ---- ");
                         Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "-- New Pokemon: " + result.getEvolvedPokemon().getPokemonId());
-                        Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "-- Exp Gained: " + result.getExpAwarded());
+                        Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Evolution: " + pokemonToEvolve.getPokemonId() + " (" + pokemonToEvolve.getIvInPercentage() + "%) To " + result.getEvolvedPokemon().getPokemonId() + " (" + result.getEvolvedPokemon().getIvInPercentage() + "%)");
+                        if (newCatch) {
+                            Logger.INSTANCE.Log(Logger.TYPE.EVENT, "New Pokedex Entry! " + result.getEvolvedPokemon().getPokemonId());
+                        }
+
                         canEvolve = result.getEvolvedPokemon().canEvolve();
                         chosenPokemon = result.getEvolvedPokemon().getPokemonId();
-                        
+
                     } else {
                         Logger.INSTANCE.Log(Logger.TYPE.DEBUG, "---- Evolution Failed! ---- ");
                     }
@@ -266,6 +276,7 @@ public class MyPokemon {
             }
             Thread.sleep(5000);
         }
+
     }
 
     public int getCandiesToEvolve(PokemonId pokemonID) {
@@ -291,7 +302,11 @@ public class MyPokemon {
 
     public int getCandiesFromFamily(PokemonId pokemonID) {
         List<Pokemon> myFamily = getFullFamily(pokemonID);
-        return myFamily.get(0).getCandy();
+        if (myFamily.isEmpty()) {
+            return 0;
+        } else {
+            return myFamily.get(0).getCandy();
+        }
     }
 
     public List<Pokemon> orderByIVsDesc(List<Pokemon> sortingList) {

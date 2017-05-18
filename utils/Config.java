@@ -13,7 +13,11 @@ public class Config {
     private static double LONGITUDE = -1.8762018;
     private static double ALTITUDE = 0.0;
     private static String HASH_KEY = "5M1O7O8L1L7T0S3L6C1S";
-
+    private static String PROXY_ADDRESS = "notset";
+    private static int PROXY_PORT = 0;
+    private static String PROXY_USERNAME = "notset";
+    private static String PROXY_PASSWORD = "notset";
+    
     public Config() {
         final String CONFIGFILE = "config.ini";
         File f = new File(CONFIGFILE);
@@ -47,6 +51,17 @@ public class Config {
                                 break;
                             case "hashkey":
                                 HASH_KEY = value;
+                                break;
+                            case "proxyaddress":
+                                PROXY_ADDRESS = value;
+                                break;
+                            case "proxyport":
+                                PROXY_PORT = Integer.parseInt(value);
+                                break;
+                            case "proxyusername":
+                                PROXY_USERNAME = value;
+                            case "proxypassword":
+                                PROXY_PASSWORD = value;
                         }
                     }
                 }
@@ -80,4 +95,21 @@ public class Config {
     public static String getHASH_KEY() {
         return HASH_KEY;
     }
+
+    public static String getPROXY_ADDRESS() {
+        return PROXY_ADDRESS;
+    }
+
+    public static String getPROXY_USERNAME() {
+        return PROXY_USERNAME;
+    }
+
+    public static String getPROXY_PASSWORD() {
+        return PROXY_PASSWORD;
+    }
+    
+    public static int getPROXY_PORT() {
+        return PROXY_PORT;
+    }
+    
 }

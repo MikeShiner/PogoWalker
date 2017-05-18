@@ -15,6 +15,7 @@ import com.pokegoapi.api.inventory.Pokeball;
 import com.pokegoapi.exceptions.request.RequestFailedException;
 import java.util.Collection;
 import java.util.List;
+import walker.utils.DAO;
 
 /**
  *
@@ -23,6 +24,8 @@ import java.util.List;
 public class Inventory {
 
     ItemBag bag;
+    private DAO database;
+    
     int pokeballs = 0;
     int greatballs = 0;
     int ultraballs = 0;
@@ -36,9 +39,10 @@ public class Inventory {
     int razzberries = 0;
     int nanabberries = 0;
     int pinapberries = 0;
-    
+
     int incubators = 0;
     int incubators_free = 0;
+    int luckyeggs = 0;
 
     int incense_count = 0;
     int revives_count = 0;
@@ -46,13 +50,16 @@ public class Inventory {
     int dragon_scale = 0;
     int kings_rock = 0;
     int upgrade = 0;
+    int sun_stone = 0;
 
     int bagCount = 0;
     int bagMax = 0;
     List<Pokeball> usablePokeballs;
 
-    public Inventory(PokemonGo go) {
+    public Inventory(PokemonGo go, DAO indatabase) {
         update(go);
+        database = indatabase;
+        saveToDB();
     }
 
     public int getBalls_total() {
@@ -85,12 +92,14 @@ public class Inventory {
         dragon_scale = bag.getItem(ITEM_DRAGON_SCALE).getCount();
         kings_rock = bag.getItem(ITEM_KINGS_ROCK).getCount();
         upgrade = bag.getItem(ITEM_UP_GRADE).getCount();
-        
+        sun_stone = bag.getItem(ITEM_SUN_STONE).getCount();
+
         razzberries = bag.getItem(ITEM_RAZZ_BERRY).getCount();
         nanabberries = bag.getItem(ITEM_NANAB_BERRY).getCount();
         pinapberries = bag.getItem(ITEM_PINAP_BERRY).getCount();
-        
-        incubators = bag.getItem(ITEM_INCUBATOR_BASIC).getCount();                
+
+        incubators = bag.getItem(ITEM_INCUBATOR_BASIC).getCount();
+        luckyeggs = bag.getItem(ITEM_LUCKY_EGG).getCount();
 
         usablePokeballs = bag.getUsablePokeballs();
 
@@ -104,7 +113,15 @@ public class Inventory {
         System.out.println("Potions/Super/Max: " + potions + "/" + superpotions + "/" + hyperpotions);
         System.out.println("Razz/Nanab/Pinap: " + razzberries + "/" + nanabberries + "/" + pinapberries);
         System.out.println("Revives: " + revives_count);
+        System.out.println(" --- Special Items: ");
+        System.out.println("Metal Coat: " + metal_coat);
+        System.out.println("Dragon Scale: " + dragon_scale);
+        System.out.println("Kings Rock: " + kings_rock);
+        System.out.println("Upgrades: " + upgrade);
+        System.out.println("Sun Stone: " + sun_stone);
+        System.out.println(" --- Others: ");
         System.out.println("Incubators: " + incubators);
+        System.out.println("Lucky Eggs: " + luckyeggs);
     }
 
     public void clearItems() throws RequestFailedException {
@@ -127,11 +144,11 @@ public class Inventory {
         }
         if (razzberries > 50) {
             System.out.println("Thorwing away " + razzberries + " Razz Berries..");
-            bag.removeItem(ITEM_RAZZ_BERRY, razzberries);            
+            bag.removeItem(ITEM_RAZZ_BERRY, razzberries);
         }
         if (pinapberries > 1) {
             System.out.println("Thorwing away " + pinapberries + " Pinap Berries..");
-            bag.removeItem(ITEM_PINAP_BERRY, pinapberries);            
+            bag.removeItem(ITEM_PINAP_BERRY, pinapberries);
         }
         if (nanabberries > 1) {
             System.out.println("Thorwing away " + nanabberries + " Nanab Berries..");
@@ -147,7 +164,7 @@ public class Inventory {
                 bag.removeItem(ITEM_GREAT_BALL, (greatballs - 100));
             } else if (ultraballs > 100) {
                 System.out.println("Thorwing away " + (ultraballs - 100) + " Ultraballs..");
-                bag.removeItem(ITEM_ULTRA_BALL, (ultraballs - 100));                
+                bag.removeItem(ITEM_ULTRA_BALL, (ultraballs - 100));
             }
         }
     }
@@ -159,8 +176,8 @@ public class Inventory {
     public List<Pokeball> getUsablePokeballs() {
         return usablePokeballs;
     }
-    
-    public boolean checkHasItem(ItemId item){
+
+    public boolean checkHasItem(ItemId item) {
         return bag.getItem(item).getCount() > 0;
     }
 

@@ -29,6 +29,9 @@ import com.pokegoapi.util.hash.HashProvider;
 import com.pokegoapi.util.hash.pokehash.PokeHashKey;
 import com.pokegoapi.util.hash.pokehash.PokeHashProvider;
 import com.pokegoapi.util.path.Path;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,7 +40,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
-import okhttp3.OkHttpClient;
+import java.util.concurrent.TimeUnit;
+import okhttp3.Authenticator;
+import okhttp3.*;
 import walker.classes.*;
 import walker.utils.*;
 
@@ -47,7 +52,7 @@ import walker.utils.*;
  */
 public class Main {
 
-    private static final OkHttpClient HTTPCLIENT = new OkHttpClient();
+    private static OkHttpClient HTTPCLIENT;
     private static final Random RANDOM = new Random();
     private static final DAO DATABASE = new DAO();
     private static final Config config = new Config();
@@ -58,7 +63,11 @@ public class Main {
     private static int level = 0;
     private static final DecimalFormat f = new DecimalFormat("##.00");
 
-    public static void main(String[] args) throws InterruptedException {        
+    public static void main(String[] args) throws InterruptedException {
+//        HTTPCLIENT = new OkHttpClient();
+
+        HTTPCLIENT = buildClient();
+
         startLooper();
         currLatitude = config.getLATITUDE();
         currLongitude = config.getLONGITUDE();
@@ -67,18 +76,20 @@ public class Main {
     private static void startLooper() {
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "START: Logging in...");
         boolean looper = true;
-        
+
         while (looper) {
             api = null; // Reconnection reset
             try {
                 api = login(config.getHASH_KEY(), config.getLOGIN(), config.getPASSWORD(), config.getLONGITUDE(), config.getLATITUDE());
-                Inventory inv = new Inventory(api);
+                Inventory inv = new Inventory(api, DATABASE);
                 inv.printStock();
                 inv.clearItems();
                 MyPokedex myPokedex = new MyPokedex(api, DATABASE);
                 MyPokemon myPokemon = new MyPokemon(api, DATABASE);
+
                 printStats(inv, myPokemon, api.getPlayerProfile());
-                myPokemon.printMyPokemon();
+                myPokemon.printBagStats();
+//                myPokemon.listPokemon(api);
                 catchArea(myPokedex, myPokemon, inv, api);
                 while (true) {
                     List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
@@ -171,10 +182,11 @@ public class Main {
                 } catch (InterruptedException e) {
                     Logger.INSTANCE.Log(Logger.TYPE.ERROR, e.toString());
                 }
-                System.out.println("Finished traveling to pokestop.");
                 if (pokestop.inRange() && pokestop.canLoot()) {
                     PokestopLootResult result = pokestop.loot();
                     System.out.println("Looting pokestop: " + result.getResult());
+                    Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
+                    inv.clearItems();
                 }
                 inv.update(api);
                 requestChill("short");
@@ -203,8 +215,11 @@ public class Main {
                 if (!newPokedexEntry) {
                     processPokemon(encounter, myPkmn, pokedex, inv, api);
                 } else {
-                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's a " + cp.getPokemonId() + " and I need it for my Pokedex!");
-                    catchPokemon(encounter, api);
+                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need it for my Pokedex!");
+                    Pokemon newPokemon = catchPokemon(encounter, api);
+                    if (newPokemon != null) {
+                        Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Caught a new Pokedex entry! " + newPokemon.getPokemonId() + "(" + newPokemon.getIvInPercentage() + "%)");
+                    }
                     requestChill("long");
                 }
             } else {
@@ -293,7 +308,6 @@ public class Main {
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
                 myPokemon.evolveMyBest(caughtPokemon.getPokemonId(), pokedex, inv);
 
-
             }
         } else if (!haveIGotEnoughCandies && isItBetterIvs) {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need the candy and it's a better one than I have.. I will catch it and transfer the old one.");
@@ -320,8 +334,9 @@ public class Main {
             Logger.INSTANCE.Log(Logger.TYPE.INFO, "Don't need the candy and it's worse IV one. I'l leave it I reckon.");
             // Don't bother catching - don't need it. - But spend your candy evolving the type!
 
-            myPokemon.evolveMyBest(pokemonID);
+            myPokemon.evolveMyBest(pokemonID, pokedex, inv);
             myPokemon.update(api);
+            myPokemon.transferInsuperior(pokemonID);
 
         }
         requestChill("short");
@@ -333,8 +348,8 @@ public class Main {
         PokeBank pokebank = api.getInventories().getPokebank();
         Pokemon caughtPokemon = null;
         if (encounter.isSuccessful()) {
-            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encountered: " + encounter.getEncounteredPokemon().getPokemonId() + 
-                    "(" + getPercentageIV(encounter.getEncounteredPokemon()) + "%)");
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Encountered: " + encounter.getEncounteredPokemon().getPokemonId()
+                    + "(" + getPercentageIV(encounter.getEncounteredPokemon()) + "%)");
 
             List<Pokeball> usablePokeballs = bag.getUsablePokeballs();
             if (usablePokeballs.size() > 0) {
@@ -431,7 +446,6 @@ public class Main {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Error Logging in. " + ex.toString());
                 requestChill("long");
                 requestChill("long");
-                requestChill("long");
             }
         }
         return api;
@@ -464,5 +478,53 @@ public class Main {
         double ivAttack = pkmn.getIndividualAttack();
         double ivDefense = pkmn.getIndividualDefense();
         return (ivAttack + ivDefense + ivStamina) * 100 / 45.0;
+    }
+
+    private static OkHttpClient buildClient() {
+        final String proxyHost = config.getPROXY_ADDRESS();
+        final int proxyPort = config.getPROXY_PORT();
+        final String username = config.getPROXY_USERNAME();
+        OkHttpClient client;
+        if ("notset".equals(proxyHost)) {
+            // No proxy
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "No proxy set.");
+            client = new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .build();
+        } else if ("notset".equals(username)) {
+            // Proxy without authentication
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Using proxy " + proxyHost + ":" + proxyPort);
+            client = new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)))
+                    .build();
+        } else {
+            // Proxy with authentication
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Using authenticated proxy " + proxyHost + ":" + proxyPort);
+            final String password = config.getPROXY_PASSWORD();
+
+            Authenticator proxyAuthenticator = new Authenticator() {
+                @Override
+                public Request authenticate(Route route, Response response) throws IOException {
+                    String credential = Credentials.basic(username, password);
+                    return response.request().newBuilder()
+                            .header("Proxy-Authorization", credential)
+                            .build();
+                }
+            };
+
+            client = new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)))
+                    .proxyAuthenticator(proxyAuthenticator)
+                    .build();
+        }
+        return client;
     }
 }
