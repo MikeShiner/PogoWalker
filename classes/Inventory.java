@@ -42,6 +42,7 @@ public class Inventory {
     int potions = 0;
     int superpotions = 0;
     int hyperpotions = 0;
+    int maxpotions = 0;
     int potions_total = 0;
 
     int razzberries = 0;
@@ -97,6 +98,7 @@ public class Inventory {
         potions = bag.getItem(ITEM_POTION).getCount();
         superpotions = bag.getItem(ITEM_SUPER_POTION).getCount();
         hyperpotions = bag.getItem(ITEM_HYPER_POTION).getCount();
+        maxpotions = bag.getItem(ITEM_MAX_POTION).getCount();
         potions_total = potions + superpotions + hyperpotions;
 
         // Cache other items
@@ -125,7 +127,7 @@ public class Inventory {
         System.out.println("Bag Space: " + bag.getItemsCount() + "/" + bag.getMaxStorage());
         System.out.println("Pokeballs(" + balls_total + ") P/G/U: " + pokeballs + "/" + greatballs + "/" + ultraballs);
         System.out.println("Incense: " + incense_count);
-        System.out.println("Potions/Super/Max: " + potions + "/" + superpotions + "/" + hyperpotions);
+        System.out.println("Potions/Super/Hyper/Max: " + potions + "/" + superpotions + "/" + hyperpotions + "/" + maxpotions);
         System.out.println("Razz/Nanab/Pinap: " + razzberries + "/" + nanabberries + "/" + pinapberries);
         System.out.println("Revives: " + revives_count);
         System.out.println(" --- Special Items: ");
@@ -206,6 +208,10 @@ public class Inventory {
             System.out.println("Thorwing away " + hyperpotions + " Hyper Potions..");
             bag.removeItem(ITEM_HYPER_POTION, hyperpotions);
         }
+        if (maxpotions > 1) {
+            System.out.println("Thorwing away " + maxpotions + " Hyper Potions..");
+            bag.removeItem(ITEM_MAX_POTION, maxpotions);
+        }
         if (revives_count > 1) {
             System.out.println("Thorwing away " + revives_count + " Revives..");
             bag.removeItem(ITEM_REVIVE, revives_count);
@@ -223,7 +229,7 @@ public class Inventory {
             bag.removeItem(ITEM_NANAB_BERRY, nanabberries);
         }
         // Only keep max 200 balls on hand
-        if (bagCount > (bagCount * 0.95)) {
+        if (bagCount > (bagCount * 0.90)) {
             if (pokeballs > 50) {
                 System.out.println("Thorwing away " + (pokeballs - 50) + " Pokeballs..");
                 bag.removeItem(ITEM_POKE_BALL, (pokeballs - 50));

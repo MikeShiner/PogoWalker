@@ -192,10 +192,11 @@ public class Main {
                     PokestopLootResult result = pokestop.loot();
                     System.out.println("Looting pokestop: " + result.getResult());
                     Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
-                    inv.clearItems();
+                    
                 }
                 inv.printStock();
                 inv.update(api);
+                inv.clearItems();
                 requestChill("short");
                 if (inv.getBalls_total() > 20) {
                     catchArea(pokedex, myPkmn, inv, api);
