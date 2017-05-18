@@ -6,18 +6,22 @@
 package walker;
 
 import POGOProtos.Data.PokemonDataOuterClass;
+import POGOProtos.Enums.EncounterTypeOuterClass;
+import POGOProtos.Enums.PokemonFamilyIdOuterClass;
 import POGOProtos.Enums.PokemonIdOuterClass.PokemonId;
 import POGOProtos.Inventory.Item.ItemIdOuterClass;
 import POGOProtos.Networking.Responses.CatchPokemonResponseOuterClass;
 import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.inventory.*;
 import com.pokegoapi.api.listener.PlayerListener;
+import com.pokegoapi.api.listener.PokemonListener;
 import com.pokegoapi.api.map.MapObjects;
 import com.pokegoapi.api.map.Point;
 import com.pokegoapi.api.map.fort.Pokestop;
 import com.pokegoapi.api.map.fort.PokestopLootResult;
 import com.pokegoapi.api.map.pokemon.*;
 import com.pokegoapi.api.player.*;
+import com.pokegoapi.api.pokemon.HatchedEgg;
 import com.pokegoapi.api.pokemon.Pokemon;
 import com.pokegoapi.api.settings.PokeballSelector;
 import com.pokegoapi.auth.PtcCredentialProvider;
@@ -442,6 +446,35 @@ public class Main {
                     }
 
                 });
+                api.addListener(new PokemonListener() {
+
+                    @Override
+                    public boolean onEggHatch(PokemonGo pg, HatchedEgg he) {
+                        Logger.INSTANCE.Log(Logger.TYPE.EVENT, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
+                        Logger.INSTANCE.Log(Logger.TYPE.INFO, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
+                        // To do more hatching here
+                        // true to remove egg from Hatchery
+                        return true;
+                    }
+
+                    @Override
+                    public void onEncounter(PokemonGo pg, long l, CatchablePokemon cp, EncounterTypeOuterClass.EncounterType et) {
+//                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+
+                    @Override
+                    public boolean onCatchEscape(PokemonGo pg, CatchablePokemon cp, Pokeball pkbl, int i) {
+//                        throw new UnsupportedOperanException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+
+                        return false;
+                    }
+
+                    @Override
+                    public void onBuddyFindCandy(PokemonGo pg, PokemonFamilyIdOuterClass.PokemonFamilyId pfi, int i) {
+//                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+                });
+
             } catch (Exception ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Error Logging in. " + ex.toString());
                 requestChill("long");

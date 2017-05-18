@@ -9,12 +9,15 @@ import POGOProtos.Inventory.Item.ItemIdOuterClass;
 import POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId;
 import static POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId.*;
 import com.pokegoapi.api.PokemonGo;
+import com.pokegoapi.api.inventory.EggIncubator;
 import com.pokegoapi.api.inventory.Item;
 import com.pokegoapi.api.inventory.ItemBag;
 import com.pokegoapi.api.inventory.Pokeball;
+import com.pokegoapi.api.pokemon.EggPokemon;
 import com.pokegoapi.exceptions.request.RequestFailedException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import walker.utils.DAO;
 
 /**
@@ -40,7 +43,7 @@ public class Inventory {
     int nanabberries = 0;
     int pinapberries = 0;
 
-    int incubators = 0;
+    int incubators_count = 0;
     int incubators_free = 0;
     int luckyeggs = 0;
 
@@ -55,6 +58,9 @@ public class Inventory {
     int bagCount = 0;
     int bagMax = 0;
     List<Pokeball> usablePokeballs;
+    
+    Set<EggPokemon> eggs;
+    List<EggIncubator> incubators;
 
     public Inventory(PokemonGo go, DAO indatabase) {
         update(go);
@@ -68,6 +74,8 @@ public class Inventory {
 
     public void update(PokemonGo go) {
         bag = go.getInventories().getItemBag();
+        eggs = go.getInventories().getHatchery().getEggs();
+        incubators = go.getInventories().getIncubators();
         bagCount = bag.getItemsCount();
 
         // Cache collection of items
@@ -98,7 +106,7 @@ public class Inventory {
         nanabberries = bag.getItem(ITEM_NANAB_BERRY).getCount();
         pinapberries = bag.getItem(ITEM_PINAP_BERRY).getCount();
 
-        incubators = bag.getItem(ITEM_INCUBATOR_BASIC).getCount();
+        incubators = incubators.size();
         luckyeggs = bag.getItem(ITEM_LUCKY_EGG).getCount();
 
         usablePokeballs = bag.getUsablePokeballs();
