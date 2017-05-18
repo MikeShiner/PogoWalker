@@ -65,29 +65,9 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException {
 //        HTTPCLIENT = new OkHttpClient();
-        int proxyPort = 3128;
-        String proxyHost = "210.203.20.9";
-        final String username = "username";
-        final String password = "password";
 
-//        Authenticator proxyAuthenticator = new Authenticator() {
-//            @Override
-//            public Request authenticate(Route route, Response response) throws IOException {
-//                String credential = Credentials.basic(username, password);
-//                return response.request().newBuilder()
-//                        .header("Proxy-Authorization", credential)
-//                        .build();
-//            }
-//        };
+        HTTPCLIENT = buildClient();
 
-        HTTPCLIENT = new OkHttpClient.Builder()
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)))
-//                .proxyAuthenticator(proxyAuthenticator)
-                .build();
-        
         startLooper();
         currLatitude = config.getLATITUDE();
         currLongitude = config.getLONGITUDE();
@@ -202,10 +182,11 @@ public class Main {
                 } catch (InterruptedException e) {
                     Logger.INSTANCE.Log(Logger.TYPE.ERROR, e.toString());
                 }
-                System.out.println("Finished traveling to pokestop.");
                 if (pokestop.inRange() && pokestop.canLoot()) {
                     PokestopLootResult result = pokestop.loot();
                     System.out.println("Looting pokestop: " + result.getResult());
+                    Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
+                    inv.clearItems();
                 }
                 inv.update(api);
                 requestChill("short");
@@ -234,8 +215,11 @@ public class Main {
                 if (!newPokedexEntry) {
                     processPokemon(encounter, myPkmn, pokedex, inv, api);
                 } else {
-                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's a " + cp.getPokemonId() + " and I need it for my Pokedex!");
-                    catchPokemon(encounter, api);
+                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "I need it for my Pokedex!");
+                    Pokemon newPokemon = catchPokemon(encounter, api);
+                    if (newPokemon != null) {
+                        Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Caught a new Pokedex entry! " + newPokemon.getPokemonId() + "(" + newPokemon.getIvInPercentage() + "%)");
+                    }
                     requestChill("long");
                 }
             } else {
@@ -494,5 +478,53 @@ public class Main {
         double ivAttack = pkmn.getIndividualAttack();
         double ivDefense = pkmn.getIndividualDefense();
         return (ivAttack + ivDefense + ivStamina) * 100 / 45.0;
+    }
+
+    private static OkHttpClient buildClient() {
+        final String proxyHost = config.getPROXY_ADDRESS();
+        final int proxyPort = config.getPROXY_PORT();
+        final String username = config.getPROXY_USERNAME();
+        OkHttpClient client;
+        if ("notset".equals(proxyHost)) {
+            // No proxy
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "No proxy set.");
+            client = new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .build();
+        } else if ("notset".equals(username)) {
+            // Proxy without authentication
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Using proxy " + proxyHost + ":" + proxyPort);
+            client = new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)))
+                    .build();
+        } else {
+            // Proxy with authentication
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "Using authenticated proxy " + proxyHost + ":" + proxyPort);
+            final String password = config.getPROXY_PASSWORD();
+
+            Authenticator proxyAuthenticator = new Authenticator() {
+                @Override
+                public Request authenticate(Route route, Response response) throws IOException {
+                    String credential = Credentials.basic(username, password);
+                    return response.request().newBuilder()
+                            .header("Proxy-Authorization", credential)
+                            .build();
+                }
+            };
+
+            client = new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)))
+                    .proxyAuthenticator(proxyAuthenticator)
+                    .build();
+        }
+        return client;
     }
 }

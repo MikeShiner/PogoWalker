@@ -42,6 +42,7 @@ public class Inventory {
 
     int incubators = 0;
     int incubators_free = 0;
+    int luckyeggs = 0;
 
     int incense_count = 0;
     int revives_count = 0;
@@ -49,6 +50,7 @@ public class Inventory {
     int dragon_scale = 0;
     int kings_rock = 0;
     int upgrade = 0;
+    int sun_stone = 0;
 
     int bagCount = 0;
     int bagMax = 0;
@@ -90,12 +92,14 @@ public class Inventory {
         dragon_scale = bag.getItem(ITEM_DRAGON_SCALE).getCount();
         kings_rock = bag.getItem(ITEM_KINGS_ROCK).getCount();
         upgrade = bag.getItem(ITEM_UP_GRADE).getCount();
+        sun_stone = bag.getItem(ITEM_SUN_STONE).getCount();
 
         razzberries = bag.getItem(ITEM_RAZZ_BERRY).getCount();
         nanabberries = bag.getItem(ITEM_NANAB_BERRY).getCount();
         pinapberries = bag.getItem(ITEM_PINAP_BERRY).getCount();
 
         incubators = bag.getItem(ITEM_INCUBATOR_BASIC).getCount();
+        luckyeggs = bag.getItem(ITEM_LUCKY_EGG).getCount();
 
         usablePokeballs = bag.getUsablePokeballs();
 
@@ -109,7 +113,15 @@ public class Inventory {
         System.out.println("Potions/Super/Max: " + potions + "/" + superpotions + "/" + hyperpotions);
         System.out.println("Razz/Nanab/Pinap: " + razzberries + "/" + nanabberries + "/" + pinapberries);
         System.out.println("Revives: " + revives_count);
+        System.out.println(" --- Special Items: ");
+        System.out.println("Metal Coat: " + metal_coat);
+        System.out.println("Dragon Scale: " + dragon_scale);
+        System.out.println("Kings Rock: " + kings_rock);
+        System.out.println("Upgrades: " + upgrade);
+        System.out.println("Sun Stone: " + sun_stone);
+        System.out.println(" --- Others: ");
         System.out.println("Incubators: " + incubators);
+        System.out.println("Lucky Eggs: " + luckyeggs);
     }
 
     public void clearItems() throws RequestFailedException {
