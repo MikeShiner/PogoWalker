@@ -282,7 +282,6 @@ public class MyPokemon {
     public int getCandiesToEvolve(PokemonId pokemonID) {
         PokemonId currentPokemon = evolutionMeta.getBasic(pokemonID).get(0);
         boolean canEvolve = evolutionMeta.canEvolve(currentPokemon);
-        System.out.println(currentPokemon);
         int candyCount = 0;
         if (canEvolve) {
             candyCount = evolutionMeta.getEvolution(currentPokemon).getEvolutionBranch().get(0).getCandyCost();
@@ -290,7 +289,6 @@ public class MyPokemon {
             while (canEvolve) {
                 List<PokemonId> evos = evolutionMeta.getEvolutions(currentPokemon);
                 currentPokemon = evos.get(0);
-                System.out.println(currentPokemon);
                 canEvolve = evolutionMeta.canEvolve(currentPokemon);
                 if (canEvolve) {
                     candyCount = candyCount + evolutionMeta.getEvolution(currentPokemon).getEvolutionBranch().get(0).getCandyCost();
