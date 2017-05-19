@@ -8,14 +8,22 @@ package walker.classes;
 import POGOProtos.Inventory.Item.ItemIdOuterClass;
 import POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId;
 import static POGOProtos.Inventory.Item.ItemIdOuterClass.ItemId.*;
+import POGOProtos.Networking.Responses.UseItemEggIncubatorResponseOuterClass.UseItemEggIncubatorResponse.Result;
 import com.pokegoapi.api.PokemonGo;
+import com.pokegoapi.api.inventory.EggIncubator;
 import com.pokegoapi.api.inventory.Item;
 import com.pokegoapi.api.inventory.ItemBag;
 import com.pokegoapi.api.inventory.Pokeball;
+import com.pokegoapi.api.pokemon.EggPokemon;
 import com.pokegoapi.exceptions.request.RequestFailedException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import walker.utils.DAO;
+import walker.utils.Logger;
 
 /**
  *
@@ -25,7 +33,7 @@ public class Inventory {
 
     ItemBag bag;
     private DAO database;
-    
+
     int pokeballs = 0;
     int greatballs = 0;
     int ultraballs = 0;
@@ -40,8 +48,9 @@ public class Inventory {
     int nanabberries = 0;
     int pinapberries = 0;
 
-    int incubators = 0;
+    int incubators_count = 0;
     int incubators_free = 0;
+    int egg_count = 0;
     int luckyeggs = 0;
 
     int incense_count = 0;
@@ -56,6 +65,9 @@ public class Inventory {
     int bagMax = 0;
     List<Pokeball> usablePokeballs;
 
+    Set<EggPokemon> eggs;
+    List<EggIncubator> incubators;
+
     public Inventory(PokemonGo go, DAO indatabase) {
         update(go);
         database = indatabase;
@@ -68,6 +80,8 @@ public class Inventory {
 
     public void update(PokemonGo go) {
         bag = go.getInventories().getItemBag();
+        incubators = go.getInventories().getIncubators();
+        eggs = go.getInventories().getHatchery().getEggs();
         bagCount = bag.getItemsCount();
 
         // Cache collection of items
@@ -98,7 +112,8 @@ public class Inventory {
         nanabberries = bag.getItem(ITEM_NANAB_BERRY).getCount();
         pinapberries = bag.getItem(ITEM_PINAP_BERRY).getCount();
 
-        incubators = bag.getItem(ITEM_INCUBATOR_BASIC).getCount();
+        incubators_count = incubators.size();
+        egg_count = eggs.size();
         luckyeggs = bag.getItem(ITEM_LUCKY_EGG).getCount();
 
         usablePokeballs = bag.getUsablePokeballs();
@@ -120,8 +135,61 @@ public class Inventory {
         System.out.println("Upgrades: " + upgrade);
         System.out.println("Sun Stone: " + sun_stone);
         System.out.println(" --- Others: ");
-        System.out.println("Incubators: " + incubators);
+        System.out.println("Incubators: " + incubators_count);
         System.out.println("Lucky Eggs: " + luckyeggs);
+        System.out.println("Eggs: " + eggs.size());
+        for (EggIncubator incubator : incubators) {
+            if (incubator.isInUse()) {
+                System.out.println("Egg (" + incubator.getHatchDistance() + ") with " + incubator.getKmCurrentlyWalked() + "/" + incubator.getHatchDistance() + "km");
+            }
+        }
+    }
+
+    /**
+     * Checks through incubators for free ones. Organises eggs in order of
+     * distance incubates any free eggs into any free incubators.
+     */
+    public void assignNewEggs() throws RequestFailedException {
+        //
+        List<EggIncubator> freeIncubators = new ArrayList<>();
+        List<EggPokemon> freeEggs = new ArrayList<>();
+
+        incubators.stream().filter((incubator) -> (!incubator.isInUse())).forEachOrdered((incubator) -> {
+            freeIncubators.add(incubator);
+        });
+
+        eggs.stream().filter((egg) -> (!egg.isIncubate())).forEachOrdered((egg) -> {
+            freeEggs.add(egg);
+        });
+
+        int incubator_size = freeIncubators.size();
+        int egg_size = freeEggs.size();
+        Logger.INSTANCE.Log(Logger.TYPE.INFO, incubator_size + " free incubators.");;
+        Logger.INSTANCE.Log(Logger.TYPE.INFO, egg_size + " free eggs.");
+
+        if (egg_size > 0) {
+            // Order Eggs by lowest to highest
+            Comparator<EggPokemon> comparator = (EggPokemon primary, EggPokemon secondary) -> {
+                Logger.INSTANCE.Log(Logger.TYPE.INFO, freeIncubators.size() + " free eggs.");
+                double distance1 = primary.getEggKmWalkedTarget();
+                double distance2 = secondary.getEggKmWalkedTarget();
+                return Double.compare(distance1, distance2);
+            };
+            Collections.sort(freeEggs, comparator);
+        }
+        
+        // Whilst I can still make a pair
+        while (incubator_size > 0 && egg_size > 0) {
+            EggPokemon egg = freeEggs.get(0);
+            Result result = egg.incubate(freeIncubators.get(0));
+            Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Incubating egg (" + egg.getEggKmWalkedTarget() + ") " + result.toString());
+            // Remove from list - update new counts
+            freeIncubators.remove(0);
+            incubator_size = freeIncubators.size();
+            freeEggs.remove(0);
+            egg_size = freeEggs.size();
+
+        }
     }
 
     public void clearItems() throws RequestFailedException {

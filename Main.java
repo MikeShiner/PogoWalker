@@ -6,18 +6,22 @@
 package walker;
 
 import POGOProtos.Data.PokemonDataOuterClass;
+import POGOProtos.Enums.EncounterTypeOuterClass;
+import POGOProtos.Enums.PokemonFamilyIdOuterClass;
 import POGOProtos.Enums.PokemonIdOuterClass.PokemonId;
 import POGOProtos.Inventory.Item.ItemIdOuterClass;
 import POGOProtos.Networking.Responses.CatchPokemonResponseOuterClass;
 import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.inventory.*;
 import com.pokegoapi.api.listener.PlayerListener;
+import com.pokegoapi.api.listener.PokemonListener;
 import com.pokegoapi.api.map.MapObjects;
 import com.pokegoapi.api.map.Point;
 import com.pokegoapi.api.map.fort.Pokestop;
 import com.pokegoapi.api.map.fort.PokestopLootResult;
 import com.pokegoapi.api.map.pokemon.*;
 import com.pokegoapi.api.player.*;
+import com.pokegoapi.api.pokemon.HatchedEgg;
 import com.pokegoapi.api.pokemon.Pokemon;
 import com.pokegoapi.api.settings.PokeballSelector;
 import com.pokegoapi.auth.PtcCredentialProvider;
@@ -89,6 +93,7 @@ public class Main {
 
                 printStats(inv, myPokemon, api.getPlayerProfile());
                 myPokemon.printBagStats();
+                inv.assignNewEggs();
 //                myPokemon.listPokemon(api);
                 catchArea(myPokedex, myPokemon, inv, api);
                 while (true) {
@@ -99,7 +104,8 @@ public class Main {
                 }
                 // Clear itms?
 //                looper = false;
-            } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
+            } catch (RequestFailedException | InterruptedException ex) {
+//            } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Main exception thrown! " + ex.toString());
                 ex.printStackTrace();
                 try {
@@ -158,8 +164,8 @@ public class Main {
                 Point destination = new Point(pokestop.getLatitude(), pokestop.getLongitude());
                 //Use the current player position as the source and the pokestop position as the destination
                 //Travel to Pokestop at 20KMPH
-                Path path = new Path(api.getPoint(), destination, 20.0);
-                System.out.println("Traveling to " + destination + " at 20KMPH! It'll take me.. " + path.getTotalTime());
+                Path path = new Path(api.getPoint(), destination, 10.0);
+                System.out.println("Traveling to " + destination + " at 10KMPH! It'll take me.. " + path.getTotalTime());
                 path.start(api);
                 int counter = 0;
                 try {
@@ -173,8 +179,8 @@ public class Main {
                         currLongitude = point.getLongitude();
                         api.setLongitude(point.getLongitude());
                         //Sleep for 2 seconds before setting the location again
-                        requestChill("short");
-                        if (counter % 4 == 0 && inv.getBalls_total() > 10) {
+                        Thread.sleep(4000);
+                        if (counter % 10 == 0 && inv.getBalls_total() > 10) {
                             catchArea(pokedex, myPkmn, inv, api);
                         }
                         counter++;
@@ -188,6 +194,7 @@ public class Main {
                     Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
                     inv.clearItems();
                 }
+                inv.printStock();
                 inv.update(api);
                 requestChill("short");
                 if (inv.getBalls_total() > 20) {
@@ -304,7 +311,6 @@ public class Main {
                 myPokemon.update(api);
 
                 requestChill("long");
-                requestChill("long");
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
                 myPokemon.evolveMyBest(caughtPokemon.getPokemonId(), pokedex, inv);
 
@@ -316,8 +322,6 @@ public class Main {
                 myPokemon.update(api);
 
                 requestChill("long");
-                requestChill("long");
-
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
             }
         } else if (!haveIGotEnoughCandies && !isItBetterIvs) {
@@ -326,7 +330,6 @@ public class Main {
             Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer this pokemon
             if (caughtPokemon != null) {
                 myPokemon.update(api);
-                requestChill("long");
                 requestChill("long");
                 myPokemon.transferPokemon(caughtPokemon);
             }
@@ -442,6 +445,38 @@ public class Main {
                     }
 
                 });
+                api.addListener(new PokemonListener() {
+
+                    @Override
+                    public boolean onEggHatch(PokemonGo pg, HatchedEgg he) {
+                        Logger.INSTANCE.Log(Logger.TYPE.EVENT, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
+                        Logger.INSTANCE.Log(Logger.TYPE.INFO, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
+                        //MyPokemon mypkn = new MyPokemon(pg, DATABASE);
+                        // Temporary to clean 
+//                        mypkn.transferInsuperior(he.getPokemon().getPokemonId());
+                    
+                        // true to remove egg from Hatchery
+                        return true;
+                    }
+
+                    @Override
+                    public void onEncounter(PokemonGo pg, long l, CatchablePokemon cp, EncounterTypeOuterClass.EncounterType et) {
+//                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+
+                    @Override
+                    public boolean onCatchEscape(PokemonGo pg, CatchablePokemon cp, Pokeball pkbl, int i) {
+//                        throw new UnsupportedOperanException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+
+                        return false;
+                    }
+
+                    @Override
+                    public void onBuddyFindCandy(PokemonGo pg, PokemonFamilyIdOuterClass.PokemonFamilyId pfi, int i) {
+//                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+                });
+
             } catch (Exception ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Error Logging in. " + ex.toString());
                 requestChill("long");
