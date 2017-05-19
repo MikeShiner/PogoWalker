@@ -93,8 +93,9 @@ public class Main {
 
                 printStats(inv, myPokemon, api.getPlayerProfile());
                 myPokemon.printBagStats();
+                inv.assignNewEggs();
 //                myPokemon.listPokemon(api);
-                catchArea(myPokedex, myPokemon, inv, api);
+//                catchArea(myPokedex, myPokemon, inv, api);
                 while (true) {
                     List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
                     walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
@@ -103,7 +104,8 @@ public class Main {
                 }
                 // Clear itms?
 //                looper = false;
-            } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
+            } catch (RequestFailedException | InterruptedException ex) {
+//            } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Main exception thrown! " + ex.toString());
                 ex.printStackTrace();
                 try {
@@ -179,7 +181,7 @@ public class Main {
                         //Sleep for 2 seconds before setting the location again
                         requestChill("short");
                         if (counter % 4 == 0 && inv.getBalls_total() > 10) {
-                            catchArea(pokedex, myPkmn, inv, api);
+//                            catchArea(pokedex, myPkmn, inv, api);
                         }
                         counter++;
                     }
@@ -191,11 +193,12 @@ public class Main {
                     System.out.println("Looting pokestop: " + result.getResult());
                     Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
                     inv.clearItems();
+                    inv.printStock();
                 }
                 inv.update(api);
                 requestChill("short");
                 if (inv.getBalls_total() > 20) {
-                    catchArea(pokedex, myPkmn, inv, api);
+//                    catchArea(pokedex, myPkmn, inv, api);
                 }
             }
         } catch (Exception ex) {
@@ -308,7 +311,6 @@ public class Main {
                 myPokemon.update(api);
 
                 requestChill("long");
-                requestChill("long");
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
                 myPokemon.evolveMyBest(caughtPokemon.getPokemonId(), pokedex, inv);
 
@@ -320,8 +322,6 @@ public class Main {
                 myPokemon.update(api);
 
                 requestChill("long");
-                requestChill("long");
-
                 myPokemon.transferInsuperior(caughtPokemon.getPokemonId());
             }
         } else if (!haveIGotEnoughCandies && !isItBetterIvs) {
@@ -330,7 +330,6 @@ public class Main {
             Pokemon caughtPokemon = catchPokemon(encounter, api); // Transfer this pokemon
             if (caughtPokemon != null) {
                 myPokemon.update(api);
-                requestChill("long");
                 requestChill("long");
                 myPokemon.transferPokemon(caughtPokemon);
             }
