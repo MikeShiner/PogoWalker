@@ -148,7 +148,7 @@ public class Main {
             double lng = api.getLongitude();
             double distance1 = MapUtil.distFrom(primary.getLatitude(), primary.getLongitude(), lat, lng);
             double distance2 = MapUtil.distFrom(secondary.getLatitude(), secondary.getLongitude(), lat, lng);
-            return Double.compare(distance1, distance2);
+            return Double.compare(distance2, distance1);
         };
         Collections.sort(priorityStops, comparator);
         Collections.sort(otherStops, comparator);
@@ -164,8 +164,8 @@ public class Main {
                 Point destination = new Point(pokestop.getLatitude(), pokestop.getLongitude());
                 //Use the current player position as the source and the pokestop position as the destination
                 //Travel to Pokestop at 20KMPH
-                Path path = new Path(api.getPoint(), destination, 20.0);
-                System.out.println("Traveling to " + destination + " at 20KMPH! It'll take me.. " + path.getTotalTime());
+                Path path = new Path(api.getPoint(), destination, 10.0);
+                System.out.println("Traveling to " + destination + " at 10KMPH! It'll take me.. " + path.getTotalTime());
                 path.start(api);
                 int counter = 0;
                 try {
@@ -179,8 +179,8 @@ public class Main {
                         currLongitude = point.getLongitude();
                         api.setLongitude(point.getLongitude());
                         //Sleep for 2 seconds before setting the location again
-                        requestChill("short");
-                        if (counter % 4 == 0 && inv.getBalls_total() > 10) {
+                        Thread.sleep(4000);
+                        if (counter % 10 == 0 && inv.getBalls_total() > 10) {
 //                            catchArea(pokedex, myPkmn, inv, api);
                         }
                         counter++;
@@ -193,7 +193,7 @@ public class Main {
                     System.out.println("Looting pokestop: " + result.getResult());
                     Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
                     inv.clearItems();
-                    inv.printStock();
+                inv.printStock();
                 }
                 inv.update(api);
                 requestChill("short");
@@ -451,7 +451,8 @@ public class Main {
                     public boolean onEggHatch(PokemonGo pg, HatchedEgg he) {
                         Logger.INSTANCE.Log(Logger.TYPE.EVENT, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
                         Logger.INSTANCE.Log(Logger.TYPE.INFO, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
-                        // To do more hatching here
+                        // Temporary to clean 
+                    
                         // true to remove egg from Hatchery
                         return true;
                     }

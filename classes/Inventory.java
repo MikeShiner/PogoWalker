@@ -140,7 +140,7 @@ public class Inventory {
         System.out.println("Eggs: " + eggs.size());
         for (EggIncubator incubator : incubators) {
             if (incubator.isInUse()) {
-                System.out.println("Egg (" + incubator.getHatchDistance() + ") with " + incubator.getKmCurrentlyWalked() + "/" + incubator.getKmLeftToWalk() + "km");
+                System.out.println("Egg (" + incubator.getHatchDistance() + ") with " + incubator.getKmCurrentlyWalked() + "/" + incubator.getHatchDistance() + "km");
             }
         }
     }
