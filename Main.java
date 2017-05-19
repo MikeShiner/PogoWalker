@@ -95,7 +95,7 @@ public class Main {
                 myPokemon.printBagStats();
                 inv.assignNewEggs();
 //                myPokemon.listPokemon(api);
-//                catchArea(myPokedex, myPokemon, inv, api);
+                catchArea(myPokedex, myPokemon, inv, api);
                 while (true) {
                     List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
                     walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
@@ -148,7 +148,7 @@ public class Main {
             double lng = api.getLongitude();
             double distance1 = MapUtil.distFrom(primary.getLatitude(), primary.getLongitude(), lat, lng);
             double distance2 = MapUtil.distFrom(secondary.getLatitude(), secondary.getLongitude(), lat, lng);
-            return Double.compare(distance2, distance1);
+            return Double.compare(distance1, distance2);
         };
         Collections.sort(priorityStops, comparator);
         Collections.sort(otherStops, comparator);
@@ -181,7 +181,7 @@ public class Main {
                         //Sleep for 2 seconds before setting the location again
                         Thread.sleep(4000);
                         if (counter % 10 == 0 && inv.getBalls_total() > 10) {
-//                            catchArea(pokedex, myPkmn, inv, api);
+                            catchArea(pokedex, myPkmn, inv, api);
                         }
                         counter++;
                     }
@@ -193,12 +193,12 @@ public class Main {
                     System.out.println("Looting pokestop: " + result.getResult());
                     Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
                     inv.clearItems();
-                inv.printStock();
                 }
+                inv.printStock();
                 inv.update(api);
                 requestChill("short");
                 if (inv.getBalls_total() > 20) {
-//                    catchArea(pokedex, myPkmn, inv, api);
+                    catchArea(pokedex, myPkmn, inv, api);
                 }
             }
         } catch (Exception ex) {
@@ -451,7 +451,9 @@ public class Main {
                     public boolean onEggHatch(PokemonGo pg, HatchedEgg he) {
                         Logger.INSTANCE.Log(Logger.TYPE.EVENT, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
                         Logger.INSTANCE.Log(Logger.TYPE.INFO, "New Pokemon Hatched! " + he.getPokemon().getPokemonId());
+                        //MyPokemon mypkn = new MyPokemon(pg, DATABASE);
                         // Temporary to clean 
+//                        mypkn.transferInsuperior(he.getPokemon().getPokemonId());
                     
                         // true to remove egg from Hatchery
                         return true;
