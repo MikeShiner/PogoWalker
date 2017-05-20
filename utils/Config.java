@@ -7,12 +7,12 @@ import java.io.IOException;
 
 public class Config {
 
-    private static String LOGIN = "mdstrainer53";
-    private static String PASSWORD = "Five@live332";
-    private static double LATITUDE = 50.715943;
-    private static double LONGITUDE = -1.8762018;
+    private static String LOGIN = "";
+    private static String PASSWORD = "";
+    private static double LATITUDE = 0;
+    private static double LONGITUDE = 0;
     private static double ALTITUDE = 0.0;
-    private static String HASH_KEY = "5M1O7O8L1L7T0S3L6C1S";
+    private static String HASH_KEY = "";
     private static String PROXY_ADDRESS = "notset";
     private static int PROXY_PORT = 0;
     private static String PROXY_USERNAME = "notset";

@@ -47,6 +47,10 @@ public class MyPokemon {
     public void update(PokemonGo api) {
         pokebag = api.getInventories().getPokebank();
         pokemons = pokebag.getPokemons();
+        List<Pokemon> newP = new ArrayList<>(pokemons);
+        for (Pokemon pokemon : newP){
+            transferInsuperior(pokemon.getPokemonId());
+        }
 
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "Updating Database PokeBag..");
         database.clearPokebag();
@@ -79,6 +83,11 @@ public class MyPokemon {
             }
         }
         return foundPokemon;
+    }
+    
+    public boolean missingEvolution(PokemonId pokemonID){
+        boolean missing = true;
+        return missing;
     }
 
     // Search through Pokebag and find all evolutions
@@ -305,6 +314,10 @@ public class MyPokemon {
         } else {
             return myFamily.get(0).getCandy();
         }
+    }
+    
+    public boolean needCandies(PokemonId pokemonId){
+        return getCandiesToEvolve(pokemonId) > getCandiesFromFamily(pokemonId);
     }
 
     public List<Pokemon> orderByIVsDesc(List<Pokemon> sortingList) {

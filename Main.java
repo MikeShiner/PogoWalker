@@ -97,14 +97,14 @@ public class Main {
 //                myPokemon.listPokemon(api);
                 catchArea(myPokedex, myPokemon, inv, api);
                 while (true) {
-                    List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex);
+                    List<Pokestop> pokestopList = getNearbyPokestops(api, myPokedex, myPokemon);
                     walkToPokestops(pokestopList, myPokedex, myPokemon, inv, api);
                     Logger.INSTANCE.Log(Logger.TYPE.INFO, "Loop complete.. Waiting some.");
                     requestChill("long");
                 }
                 // Clear itms?
 //                looper = false;
-            } catch (RequestFailedException | InterruptedException ex) {
+            } catch (RequestFailedException | InterruptedException | NoSuchItemException ex) {
 //            } catch (NoSuchItemException | RequestFailedException | InterruptedException ex) {
                 Logger.INSTANCE.Log(Logger.TYPE.ERROR, "Main exception thrown! " + ex.toString());
                 ex.printStackTrace();
@@ -121,28 +121,65 @@ public class Main {
      * Finds all nearby Pokestops and organises them in priority order if the
      * Pokemon is need for Pokedex or candy
      */
-    private static List<Pokestop> getNearbyPokestops(PokemonGo api, MyPokedex pokedex) {
+    private static List<Pokestop> getNearbyPokestops(PokemonGo api, MyPokedex pokedex, MyPokemon myPokemon) {
         MapObjects mapObjects = api.getMap().getMapObjects();
-        List<Pokestop> priorityStops = new ArrayList<>();
-        List<Pokestop> otherStops = new ArrayList<>();
+        List<Pokestop> goToStops = new ArrayList<>();
 
         //Find all pokestops with pokemon nearby
         Set<NearbyPokemon> nearby = mapObjects.getNearby();
-        for (NearbyPokemon nearbyPokemon : nearby) {
+
+        // Get List of all pokemon I need.
+        nearby.forEach((nearbyPokemon) -> {
             String fortId = nearbyPokemon.getFortId();
             //Check if nearby pokemon is near a pokestop
             if (fortId != null && fortId.length() > 0) {
                 //Find the pokestop with the fort id of the nearby pokemon
                 Pokestop pokestop = mapObjects.getPokestop(fortId);
-                if (pokestop != null && !priorityStops.contains(pokestop) && pokedex.doINeed(nearbyPokemon.getPokemonId())) {
+                if (pokestop != null && pokedex.doINeed(nearbyPokemon.getPokemonId())) {
                     Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's a " + nearbyPokemon.getPokemonId() + " nearby and I need it for my pokedex!");
-                    priorityStops.add(pokestop);
-                } else if (pokestop != null && !otherStops.contains(pokestop)) {
-                    Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's a " + nearbyPokemon.getPokemonId() + " nearby. I might go get it.");
-                    otherStops.add(pokestop);
+                    goToStops.add(pokestop);
                 }
             }
+        });
+
+        // If list is still empty (I have Pokedex entries for Pokemon nearby) - Fill list with new Pokemon where I'm missing an evolution and need candy.
+        if (goToStops.isEmpty()) {
+            nearby.forEach((nearbyPokemon) -> {
+                String fortId = nearbyPokemon.getFortId();
+                if (fortId != null && fortId.length() > 0) {
+                    Pokestop pokestop = mapObjects.getPokestop(fortId);
+                    PokemonId pokemonAtStop = nearbyPokemon.getPokemonId();
+                    // If missing evolution and need candy
+                    if (myPokemon.missingEvolution(pokemonAtStop) && myPokemon.needCandies(pokemonAtStop)) {
+                        Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's a " + pokemonAtStop + " and I'm missing an evolution! (and candy)");
+                        goToStops.add(pokestop);
+                    }
+                }
+            });
         }
+        // If still no target stops - get entire list of pokestops (Will select just the last one)
+        if (goToStops.isEmpty()) {
+            List<Pokestop> allStops = new ArrayList<>();
+            nearby.forEach((nearbyPokemon) -> {
+                String fortId = nearbyPokemon.getFortId();
+                if (fortId != null && fortId.length() > 0) {
+                    allStops.add(mapObjects.getPokestop(fortId));
+                }
+            });
+            // Organise by furthest away
+            Comparator<Pokestop> furthestFinder = (Pokestop primary, Pokestop secondary) -> {
+                double lat = api.getLatitude();
+                double lng = api.getLongitude();
+                double distance1 = MapUtil.distFrom(primary.getLatitude(), primary.getLongitude(), lat, lng);
+                double distance2 = MapUtil.distFrom(secondary.getLatitude(), secondary.getLongitude(), lat, lng);
+                return Double.compare(distance2, distance1);
+            };
+            Collections.sort(allStops, furthestFinder);
+            // Add furthest stop to list
+            goToStops.add(allStops.get(0));            
+        }
+        
+        // Organise goToStop by closest to furthest
         Comparator<Pokestop> comparator = (Pokestop primary, Pokestop secondary) -> {
             double lat = api.getLatitude();
             double lng = api.getLongitude();
@@ -150,14 +187,14 @@ public class Main {
             double distance2 = MapUtil.distFrom(secondary.getLatitude(), secondary.getLongitude(), lat, lng);
             return Double.compare(distance1, distance2);
         };
-        Collections.sort(priorityStops, comparator);
-        Collections.sort(otherStops, comparator);
-        priorityStops.addAll(otherStops);
-        return priorityStops;
+
+        Collections.sort(goToStops, comparator);
+
+        return goToStops;
     }
 
-    // First call
-    // Fetches 9 Nearby pokestops and walks between them. Bot searches for pokemon at each stop.
+// First call
+// Fetches 9 Nearby pokestops and walks between them. Bot searches for pokemon at each stop.
     private static void walkToPokestops(List<Pokestop> travelPokestops, MyPokedex pokedex, MyPokemon myPkmn, Inventory inv, PokemonGo api) {
         try {
             for (Pokestop pokestop : travelPokestops) {
@@ -179,7 +216,7 @@ public class Main {
                         currLongitude = point.getLongitude();
                         api.setLongitude(point.getLongitude());
                         //Sleep for 2 seconds before setting the location again
-                        Thread.sleep(4000);
+                        Thread.sleep(2000);
                         if (counter % 10 == 0 && inv.getBalls_total() > 10) {
                             catchArea(pokedex, myPkmn, inv, api);
                         }
@@ -192,7 +229,7 @@ public class Main {
                     PokestopLootResult result = pokestop.loot();
                     System.out.println("Looting pokestop: " + result.getResult());
                     Logger.INSTANCE.Log(Logger.TYPE.EVENT, "Finished traveling to pokestop. " + currLatitude + ", " + currLongitude + ". Looting: " + result.getResult());
-                    
+
                 }
                 inv.printStock();
                 inv.update(api);
@@ -455,7 +492,7 @@ public class Main {
                         //MyPokemon mypkn = new MyPokemon(pg, DATABASE);
                         // Temporary to clean 
 //                        mypkn.transferInsuperior(he.getPokemon().getPokemonId());
-                    
+
                         // true to remove egg from Hatchery
                         return true;
                     }
