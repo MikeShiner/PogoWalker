@@ -159,6 +159,7 @@ public class Main {
         }
         // If still no target stops - get entire list of pokestops (Will select just the last one)
         if (goToStops.isEmpty()) {
+            Logger.INSTANCE.Log(Logger.TYPE.INFO, "There's nothing I need from any stops. Walking to far away lands.. ");
             List<Pokestop> allStops = new ArrayList<>();
             nearby.forEach((nearbyPokemon) -> {
                 String fortId = nearbyPokemon.getFortId();
@@ -176,9 +177,9 @@ public class Main {
             };
             Collections.sort(allStops, furthestFinder);
             // Add furthest stop to list
-            goToStops.add(allStops.get(0));            
+            goToStops.add(allStops.get(0));
         }
-        
+
         // Organise goToStop by closest to furthest
         Comparator<Pokestop> comparator = (Pokestop primary, Pokestop secondary) -> {
             double lat = api.getLatitude();

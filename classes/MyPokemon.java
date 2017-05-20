@@ -47,10 +47,10 @@ public class MyPokemon {
     public void update(PokemonGo api) {
         pokebag = api.getInventories().getPokebank();
         pokemons = pokebag.getPokemons();
-        List<Pokemon> newP = new ArrayList<>(pokemons);
-        for (Pokemon pokemon : newP){
-            transferInsuperior(pokemon.getPokemonId());
-        }
+//        List<Pokemon> newP = new ArrayList<>(pokemons);
+//        for (Pokemon pokemon : newP){
+//            transferInsuperior(pokemon.getPokemonId());
+//        }
 
         Logger.INSTANCE.Log(Logger.TYPE.INFO, "Updating Database PokeBag..");
         database.clearPokebag();
@@ -357,12 +357,12 @@ public class MyPokemon {
      * @return List of bottom (all non-top) evos Pokemon from bag
      */
     public List<Pokemon> getLowerEvolutions(PokemonId pokemonID) {
-        List<Pokemon> topevos = getTopEvolutions(pokemonID);
+        List<PokemonId> topevos = evolutionMeta.getHighest(pokemonID);
         List<Pokemon> fullfamily = orderByIVsDesc(getFullFamily(pokemonID));
         List<Pokemon> lowerEvos = new ArrayList<>();
 
         for (Pokemon pokemon : fullfamily) {
-            if (!topevos.contains(pokemon)) {
+            if (!topevos.contains(pokemon.getPokemonId())) {
                 lowerEvos.add(pokemon);
             }
         }
